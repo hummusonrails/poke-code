@@ -1,5 +1,5 @@
 {
-  "name": "poke-harness",
+  "name": "poke-code",
   "version": "0.1.0",
   "description": "Claude Code-style terminal CLI for Poke AI",
   "type": "module",

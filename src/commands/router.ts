@@ -102,7 +102,7 @@ registerCommand('doctor', 'Run diagnostics on your poke-code setup', async (ctx)
 });
 
 registerCommand('bug', 'Report a bug or issue', () => ({
-  output: 'Report issues at: https://github.com/hummusonrails/poke-harness/issues',
+  output: 'Report issues at: https://github.com/hummusonrails/poke-code/issues',
   handled: true,
 }));
 
