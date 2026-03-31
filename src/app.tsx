@@ -18,6 +18,7 @@ import { ToolRegistry } from "./tools/registry.js";
 import type { PermissionMode, ToolCall, ToolResult } from "./types.js";
 import { InputHistory } from "./ui/input-history.js";
 import { MessageView } from "./ui/message.js";
+import { useTerminalSize, computeAppHeight } from "./ui/use-terminal-size.js";
 import { PermissionPrompt } from "./ui/permission.js";
 import { Spinner } from "./ui/spinner.js";
 import { StatusLine } from "./ui/status-line.js";
@@ -83,6 +84,7 @@ function App(props: AppProps) {
   const [messageCount, setMessageCount] = useState(0);
   const [showWelcome, setShowWelcome] = useState(true);
   const [recentSessions, setRecentSessions] = useState<{ id: string; lastActiveAt: string; cwd: string }[]>([]);
+  const termSize = useTerminalSize();
   const startTime = useRef(new Date());
   const [elapsed, setElapsed] = useState("0s");
 
@@ -566,7 +568,7 @@ function App(props: AppProps) {
   });
 
   return (
-    <Box flexDirection="column" height={Math.floor((process.stdout.rows ?? 24) * 0.8)}>
+    <Box flexDirection="column" height={computeAppHeight(termSize.rows)}>
       {/* Welcome banner (shown until first message) */}
       {showWelcome && <Welcome version="0.1.0" cwd={cwd} recentSessions={recentSessions} />}
 

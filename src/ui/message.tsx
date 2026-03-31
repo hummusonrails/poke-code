@@ -9,7 +9,7 @@ import { markedTerminal } from "marked-terminal";
 marked.use(
   markedTerminal({
     reflowText: true,
-    width: Math.min(process.stdout.columns ?? 80, 100) - 4, // leave margin
+    width: Math.min(process.stdout.columns ?? 80, 120) - 4, // leave margin
     showSectionPrefix: false,
     tab: 2,
   }) as any,
