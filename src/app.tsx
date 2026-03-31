@@ -10,7 +10,7 @@ import { routeCommand, getCommandList } from "./commands/router.js";
 import { matchCommands } from "./ui/typeahead.js";
 import { ConfigStore } from "./config/store.js";
 import { ContextBuilder } from "./context/builder.js";
-import { imsgSend } from "./db/imsg-sender.js";
+import { canImsgSend, imsgSend } from "./db/imsg-sender.js";
 import { ChatDbPoller } from "./db/poller.js";
 import { stripCommands } from "./parser/strip-commands.js";
 import { SessionManager } from "./session/manager.js";
@@ -365,7 +365,8 @@ function App(props: AppProps) {
         });
 
         // Use imsg send for tool results when available (bypasses Poke API, more reliable for large payloads)
-        const sendResultsFn = chatId ? (text: string) => imsgSend(chatId, text) : undefined;
+        const imsgAvailable = chatId ? await canImsgSend() : false;
+        const sendResultsFn = chatId && imsgAvailable ? (text: string) => imsgSend(chatId, text) : undefined;
 
         const events = conversationLoop(trimmed, {
           apiClient: apiClient.current,

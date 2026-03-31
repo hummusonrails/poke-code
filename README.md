@@ -25,6 +25,14 @@
   <img src=".github/screenshot.png" alt="poke-code terminal screenshot" width="85%" style="border-radius: 8px;">
 </p>
 
+## What's New
+
+> [!TIP]
+> **Cron Scheduling** — Schedule prompts to run on a timer with natural language (`/cron every 30 minutes check build status`) or standard cron expressions. Runs in-session or as a background daemon with optional macOS launchd integration for auto-start on boot.
+
+> [!TIP]
+> **AutoDream** — Automatic memory consolidation. After enough sessions, poke-code summarizes your recent conversations into long-term memory files so it gets smarter over time — no manual effort required. Trigger manually anytime with `/dream`.
+
 ## What it does
 
 - **Execute tools locally** - read, write, edit files, run shell commands, search the web, all from your terminal with syntax highlighting and diff previews
@@ -33,6 +41,8 @@
 - **Discover and inject skills** - automatically finds skills from `~/.claude/skills/` and marketplace plugins, matches them to your message by keyword relevance, and injects them into context
 - **Load project context** - reads `POKE.md`/`CLAUDE.md`, memory files from multiple directories, project rules, and working directory listings to give Poke full codebase awareness
 - **Manage permissions** - three-tier system (default, trusted, readonly) with per-tool approval prompts and "always allow" for trusted tools
+- **Schedule prompts with cron** - run prompts on a recurring or one-shot basis using natural language or cron expressions, with a background daemon and launchd support
+- **Auto-consolidate memory** - after enough sessions, automatically summarize recent conversations into long-term memory files that enrich future context
 - **Persist sessions** - JSONL-based session history with resume, context compaction, and session browsing
 - **Guard against partial writes** - detects when iMessage splits a file write across multiple bubbles and refuses to overwrite with incomplete content
 - **Render markdown** - assistant messages render with full terminal markdown (bold, code blocks, lists) via `marked-terminal`
@@ -101,6 +111,64 @@ poke-code --permission-mode trusted
 
 # readonly mode (no writes allowed)
 poke-code --permission-mode readonly
+
+# background cron daemon
+poke-code --daemon start
+poke-code --daemon stop
+poke-code --daemon status
+```
+
+### Cron Scheduling
+
+Schedule prompts to run on a timer using natural language or standard cron expressions:
+
+```bash
+# natural language
+/cron every 30 minutes check if the build is passing
+/cron every weekday at 5pm remind me to push my branch
+/cron tomorrow at 9am summarize overnight git activity
+
+# standard cron syntax
+/cron add */30 * * * * check build status
+/cron once 0 9 * * * run morning report
+
+# manage tasks
+/cron list
+/cron remove <id>
+/cron results
+```
+
+**Background daemon** — run cron jobs even when the CLI is closed:
+
+```bash
+# start/stop the daemon
+poke-code --daemon start
+poke-code --daemon stop
+poke-code --daemon status
+
+# auto-start on macOS login (launchd)
+/cron install
+/cron uninstall
+```
+
+Results are always written to `~/.poke/cron-results/`. When running in daemon mode, results are also sent to you via iMessage.
+
+### AutoDream (Memory Consolidation)
+
+poke-code automatically consolidates your session history into long-term memory. After 5+ sessions over 24+ hours, it summarizes recent conversations and writes memory files to `.poke/memory/autodream/`. These memories are loaded into future sessions automatically.
+
+Run `/dream` to trigger consolidation manually at any time.
+
+Configure thresholds in `~/.poke/config.json`:
+
+```json
+{
+  "autoDream": {
+    "enabled": true,
+    "minHours": 24,
+    "minSessions": 5
+  }
+}
 ```
 
 ### Tools
@@ -140,6 +208,8 @@ Read-only tools run in parallel (up to 5 concurrent). Write and bash tools run s
 | `/doctor` | Run setup diagnostics |
 | `/bug` | Report a bug or issue |
 | `/copy` | Copy last response to clipboard |
+| `/cron` | Manage scheduled prompts (add, once, list, remove, results, install, uninstall) |
+| `/dream` | Manually trigger memory consolidation |
 | `/quit` | Exit |
 
 ### Keyboard Shortcuts
@@ -262,8 +332,17 @@ poke-code/
 │   ├── session/
 │   │   ├── manager.ts        # jsonl session files with index
 │   │   └── compactor.ts      # conversation summary for context compression
+│   ├── cron/
+│   │   ├── scheduler.ts      # cron tick loop, execution, logging
+│   │   ├── storage.ts        # CRUD for scheduled_tasks.json
+│   │   ├── natural-schedule.ts # natural language → cron expression parser
+│   │   └── launchd.ts        # macOS plist generation and management
+│   ├── services/
+│   │   └── autodream.ts      # memory consolidation engine
+│   ├── entrypoints/
+│   │   └── daemon.ts         # headless daemon bootstrap
 │   ├── commands/
-│   │   └── router.ts         # 16 slash commands with diagnostics
+│   │   └── router.ts         # slash commands with diagnostics
 │   ├── ui/
 │   │   ├── welcome.tsx       # poke-branded welcome with palm tree ascii art
 │   │   ├── message.tsx       # markdown-rendered message bubbles
@@ -306,10 +385,16 @@ your-project/
 
 ```
 ~/.poke/
-├── config.json          # api key, chat settings, permissions
+├── config.json          # api key, chat settings, permissions, autodream config
 ├── sessions/            # jsonl session files + index
 ├── memory/              # global memory files
-└── rules/               # global rules
+├── rules/               # global rules
+├── scheduled_tasks.json # cron task definitions
+├── cron-results/        # execution result logs
+├── daemon.pid           # daemon process ID (when running)
+├── daemon.log           # daemon output log
+├── consolidation.lock   # autodream file lock
+└── consolidation-state.json # last consolidation timestamp
 ```
 
 ## Contributing
