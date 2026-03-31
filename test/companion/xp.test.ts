@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getStage, getUnlockedAccessories, grantXP, getNextMilestone } from "../../src/companion/xp.js";
+import { getNextMilestone, getStage, getUnlockedAccessories, grantXP } from "../../src/companion/xp.js";
 
 describe("getStage", () => {
   it("returns spark for 0 XP", () => {

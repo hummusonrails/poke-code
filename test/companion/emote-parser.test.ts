@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseEmotes, extractEmotes, actionToAnimation } from "../../src/companion/emote-parser.js";
+import { actionToAnimation, extractEmotes, parseEmotes } from "../../src/companion/emote-parser.js";
 
 describe("parseEmotes", () => {
   it("extracts emote blocks correctly", () => {
@@ -48,7 +48,7 @@ describe("extractEmotes", () => {
   });
 
   it("collapses extra newlines after emote removal", () => {
-    const text = 'Line one.\n\n\n[emote]wiggles[/emote]\n\n\nLine two.';
+    const text = "Line one.\n\n\n[emote]wiggles[/emote]\n\n\nLine two.";
     const { cleanText } = extractEmotes(text);
     expect(cleanText).not.toContain("\n\n\n");
   });

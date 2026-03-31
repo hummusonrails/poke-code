@@ -105,11 +105,4 @@ export interface ParsedEmote {
 }
 
 // Animation states driven by emote actions or local events
-export type AnimationState =
-  | "idle"
-  | "excited"
-  | "thoughtful"
-  | "nervous"
-  | "sleepy"
-  | "celebrating"
-  | "startled";
+export type AnimationState = "idle" | "excited" | "thoughtful" | "nervous" | "sleepy" | "celebrating" | "startled";

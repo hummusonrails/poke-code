@@ -8,6 +8,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PokeApiClient } from "./api/client.js";
 import { conversationLoop, createPollFn } from "./api/conversation.js";
 import { getCommandList, routeCommand } from "./commands/router.js";
+import { CompanionSprite, companionReservedColumns } from "./companion/CompanionSprite.js";
+import {
+  getCompanion,
+  hatchCompanion,
+  renameCompanion,
+  setCompanionMuted,
+  updateCompanionXP,
+} from "./companion/companion.js";
+import { extractEmotes } from "./companion/emote-parser.js";
+import { companionEvents } from "./companion/local-events.js";
+import type { AnimationState } from "./companion/types.js";
+import { getNextMilestone } from "./companion/xp.js";
 import { ConfigStore } from "./config/store.js";
 import { ContextBuilder } from "./context/builder.js";
 import { installLaunchd, uninstallLaunchd } from "./cron/launchd.js";
@@ -32,12 +44,6 @@ import { StatusLine } from "./ui/status-line.js";
 import { matchCommands } from "./ui/typeahead.js";
 import { computeAppHeight, useTerminalSize } from "./ui/use-terminal-size.js";
 import { Welcome } from "./ui/welcome.js";
-import { CompanionSprite, companionReservedColumns } from "./companion/CompanionSprite.js";
-import { getCompanion, hatchCompanion, updateCompanionXP, setCompanionMuted, renameCompanion } from "./companion/companion.js";
-import { extractEmotes } from "./companion/emote-parser.js";
-import { companionEvents } from "./companion/local-events.js";
-import { getNextMilestone } from "./companion/xp.js";
-import type { AnimationState } from "./companion/types.js";
 
 export interface AppProps {
   apiKey: string;
@@ -99,7 +105,9 @@ function App(props: AppProps) {
   const [showWelcome, setShowWelcome] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [recentSessions, setRecentSessions] = useState<{ id: string; lastActiveAt: string; cwd: string }[]>([]);
-  const [companionReaction, setCompanionReaction] = useState<{ speech?: string; animation: AnimationState } | undefined>(undefined);
+  const [companionReaction, setCompanionReaction] = useState<
+    { speech?: string; animation: AnimationState } | undefined
+  >(undefined);
   const termSize = useTerminalSize();
   const startTime = useRef(new Date());
   const [elapsed, setElapsed] = useState("0s");
@@ -516,9 +524,7 @@ function App(props: AppProps) {
             const milestoneStr = milestone
               ? `Next: ${milestone.name} (${milestone.type}, ${milestone.xpNeeded} XP away)`
               : "All milestones unlocked!";
-            const accessories = companion.accessories.length > 0
-              ? companion.accessories.join(", ")
-              : "none yet";
+            const accessories = companion.accessories.length > 0 ? companion.accessories.join(", ") : "none yet";
             return [
               `Companion: ${companion.name}`,
               `  Species: ${companion.species}`,
@@ -910,11 +916,7 @@ function App(props: AppProps) {
             const companion = getCompanion();
             if (companion && !companion.muted) {
               return (
-                <CompanionSprite
-                  companion={companion}
-                  reaction={companionReaction}
-                  terminalWidth={termSize.columns}
-                />
+                <CompanionSprite companion={companion} reaction={companionReaction} terminalWidth={termSize.columns} />
               );
             }
             return null;

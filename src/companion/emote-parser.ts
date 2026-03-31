@@ -1,4 +1,4 @@
-import type { ParsedEmote, AnimationState } from "./types.js";
+import type { AnimationState, ParsedEmote } from "./types.js";
 
 /** Match [emote]...[/emote] blocks, including multi-line content */
 const EMOTE_BLOCK = /\[emote\]([\s\S]*?)\[\/emote\]/gm;
@@ -34,15 +34,10 @@ export function parseEmotes(text: string): ParsedEmote[] {
 
     // Extract quoted speech segments
     const speechMatches = [...inner.matchAll(SPEECH_REGEX)];
-    const speech = speechMatches.length > 0
-      ? speechMatches.map((m) => m[1]).join(" ")
-      : undefined;
+    const speech = speechMatches.length > 0 ? speechMatches.map((m) => m[1]).join(" ") : undefined;
 
     // Action is everything outside the quoted parts
-    const action = inner
-      .replace(SPEECH_REGEX, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    const action = inner.replace(SPEECH_REGEX, "").replace(/\s+/g, " ").trim();
 
     emotes.push({
       raw,

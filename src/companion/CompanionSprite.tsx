@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
 import { Box, Text } from "ink";
-import type { Companion, AnimationState } from "./types.js";
-import { renderSprite, renderFace, spriteFrameCount } from "./sprites.js";
+import React, { useEffect, useRef, useState } from "react";
 import { getTheme } from "../ui/theme.js";
+import { renderFace, renderSprite, spriteFrameCount } from "./sprites.js";
+import type { AnimationState, Companion } from "./types.js";
 
 const TICK_MS = 500;
 const BUBBLE_SHOW = 20; // ticks -> 10s
@@ -38,15 +38,9 @@ function SpeechBubble({ text, fading }: SpeechBubbleProps) {
   }
 
   return (
-    <Box
-      borderStyle="round"
-      borderColor={theme.border}
-      paddingLeft={1}
-      paddingRight={1}
-      flexDirection="column"
-    >
-      {lines.map((line, i) => (
-        <Text key={i} italic dimColor={fading}>
+    <Box borderStyle="round" borderColor={theme.border} paddingLeft={1} paddingRight={1} flexDirection="column">
+      {lines.map((line) => (
+        <Text key={line} italic dimColor={fading}>
           {line}
         </Text>
       ))}
@@ -120,11 +114,13 @@ export function CompanionSprite({ companion, reaction, terminalWidth }: Companio
   if (!isWide) {
     const face = renderFace(companion.species, companion.eye);
     const blinking = !isReacting && IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length] === -1;
-    const displayFace = blinking ? face.replace(/[^\s()[\]{}<>~^|*/\\=_,.>!@#$%&+;:'"?-]/g, (ch) => {
-      // Replace eye characters with blink
-      if (ch === companion.eye) return "-";
-      return ch;
-    }) : face;
+    const displayFace = blinking
+      ? face.replace(/[^\s()[\]{}<>~^|*/\\=_,.>!@#$%&+;:'"?-]/g, (ch) => {
+          // Replace eye characters with blink
+          if (ch === companion.eye) return "-";
+          return ch;
+        })
+      : face;
 
     // Truncate quip for narrow terminals
     const maxQuipLen = Math.max(0, terminalWidth - displayFace.length - companion.name.length - 4);
@@ -137,37 +133,31 @@ export function CompanionSprite({ companion, reaction, terminalWidth }: Companio
     return (
       <Box gap={1}>
         <Text color={theme.primary}>{displayFace}</Text>
-        <Text color={theme.primary} bold>{companion.name}</Text>
+        <Text color={theme.primary} bold>
+          {companion.name}
+        </Text>
         {quip && (
-          <Text italic dimColor={fading}>{quip}</Text>
+          <Text italic dimColor={fading}>
+            {quip}
+          </Text>
         )}
       </Box>
     );
   }
 
   // Wide terminal: full sprite with optional speech bubble
-  const spriteLines = renderSprite(
-    companion.species,
-    companion.stage,
-    companion.eye,
-    frame,
-    companion.accessories,
-  );
+  const spriteLines = renderSprite(companion.species, companion.stage, companion.eye, frame, companion.accessories);
 
   // Handle blink: replace eye chars with "-" on blink frames
   const blinking = !isReacting && IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length] === -1;
-  const displayLines = blinking
-    ? spriteLines.map((line) => line.replaceAll(companion.eye, "-"))
-    : spriteLines;
+  const displayLines = blinking ? spriteLines.map((line) => line.replaceAll(companion.eye, "-")) : spriteLines;
 
   return (
     <Box flexDirection="column" alignItems="center">
-      {speaking && visibleSpeech && (
-        <SpeechBubble text={visibleSpeech} fading={fading} />
-      )}
+      {speaking && visibleSpeech && <SpeechBubble text={visibleSpeech} fading={fading} />}
       <Box flexDirection="column">
-        {displayLines.map((line, i) => (
-          <Text key={i} color={theme.primary}>
+        {displayLines.map((line) => (
+          <Text key={line} color={theme.primary}>
             {line}
           </Text>
         ))}

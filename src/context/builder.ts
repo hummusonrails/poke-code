@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { getCompanionPromptContext } from "../companion/prompt.js";
 import type { ToolRegistry } from "../tools/registry.js";
 import { MemoryReader } from "./memory.js";
 import { discoverSkills, findRelevantSkills, formatSkillsContext, type Skill } from "./skills.js";
-import { getCompanionPromptContext } from "../companion/prompt.js";
 
 export class ContextBuilder {
   private registry: ToolRegistry;

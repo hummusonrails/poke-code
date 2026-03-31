@@ -1,11 +1,5 @@
 import type { Accessory, Stage, XPEvent } from "./types.js";
-import {
-  ACCESSORIES,
-  ACCESSORY_THRESHOLDS,
-  STAGES,
-  STAGE_THRESHOLDS,
-  XP_VALUES,
-} from "./types.js";
+import { ACCESSORIES, ACCESSORY_THRESHOLDS, STAGE_THRESHOLDS, STAGES, XP_VALUES } from "./types.js";
 
 /** Derive the current evolution stage from total XP. */
 export function getStage(xp: number): Stage {
@@ -52,9 +46,7 @@ export function grantXP(
 }
 
 /** What's the next unlock (stage or accessory) and how much XP is needed? */
-export function getNextMilestone(
-  xp: number,
-): { type: "stage" | "accessory"; name: string; xpNeeded: number } | null {
+export function getNextMilestone(xp: number): { type: "stage" | "accessory"; name: string; xpNeeded: number } | null {
   let best: { type: "stage" | "accessory"; name: string; xpNeeded: number } | null = null;
 
   for (const stage of STAGES) {

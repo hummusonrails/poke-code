@@ -17,9 +17,7 @@ describe("roll", () => {
     // It's theoretically possible they match, but astronomically unlikely
     // for both species AND eye AND inspirationSeed to all match
     const same =
-      a.bones.species === b.bones.species &&
-      a.bones.eye === b.bones.eye &&
-      a.inspirationSeed === b.inspirationSeed;
+      a.bones.species === b.bones.species && a.bones.eye === b.bones.eye && a.inspirationSeed === b.inspirationSeed;
     expect(same).toBe(false);
   });
 

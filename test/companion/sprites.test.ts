@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { renderSprite, renderFace, spriteFrameCount } from "../../src/companion/sprites.js";
-import { SPECIES, STAGES } from "../../src/companion/types.js";
+import { renderFace, renderSprite, spriteFrameCount } from "../../src/companion/sprites.js";
 import type { Species, Stage } from "../../src/companion/types.js";
+import { SPECIES, STAGES } from "../../src/companion/types.js";
 
 describe("renderSprite", () => {
   it("returns 5 lines for every species/stage combo", () => {

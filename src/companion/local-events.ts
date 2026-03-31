@@ -1,12 +1,6 @@
 import type { AnimationState } from "./types.js";
 
-type CompanionEventType =
-  | "tool_success"
-  | "tool_failure"
-  | "permission_denied"
-  | "session_start"
-  | "idle"
-  | "level_up";
+type CompanionEventType = "tool_success" | "tool_failure" | "permission_denied" | "session_start" | "idle" | "level_up";
 
 type CompanionEventListener = (animation: AnimationState, duration?: number) => void;
 

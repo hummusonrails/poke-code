@@ -1,8 +1,8 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { ConfigStore } from "../config/store.js";
-import type { Companion, StoredCompanion } from "./types.js";
 import { roll } from "./roll.js";
+import type { Companion, StoredCompanion } from "./types.js";
 import { getStage, getUnlockedAccessories } from "./xp.js";
 
 function getStore(): ConfigStore {
