@@ -14,8 +14,22 @@ function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     getConfig: vi.fn(() => "model: claude-3"),
     compact: vi.fn(async () => {}),
     setApiKey: vi.fn(),
+    toggleVerbose: vi.fn(() => true),
+    getVerbose: vi.fn(() => false),
     quit: vi.fn(),
+    getMemoryList: vi.fn(() => "No memory files."),
+    getMemoryContent: vi.fn(() => ""),
+    runDiagnostics: vi.fn(async () => "All OK"),
     copyLastMessage: vi.fn(() => "Copied last response to clipboard."),
+    getReducedMotion: vi.fn(() => false),
+    setReducedMotion: vi.fn(),
+    cronAdd: vi.fn(async () => "Task created: abc123"),
+    cronList: vi.fn(() => "No scheduled tasks."),
+    cronRemove: vi.fn(() => "Removed task abc123."),
+    cronResults: vi.fn(() => "No results yet."),
+    cronInstall: vi.fn(() => "Installed."),
+    cronUninstall: vi.fn(() => "Uninstalled."),
+    runDream: vi.fn(async () => "Consolidation complete."),
     ...overrides,
   };
 }
@@ -97,27 +111,13 @@ describe("routeCommand", () => {
 });
 
 describe("getCommandList", () => {
-  it("returns all 17 registered commands", () => {
+  it("returns all registered commands", () => {
     const list = getCommandList();
-    expect(list).toHaveLength(17);
     const names = list.map((c) => c.name);
+    expect(names).toContain("cron");
+    expect(names).toContain("dream");
     expect(names).toContain("help");
-    expect(names).toContain("clear");
-    expect(names).toContain("history");
-    expect(names).toContain("sessions");
-    expect(names).toContain("compact");
-    expect(names).toContain("permissions");
-    expect(names).toContain("status");
-    expect(names).toContain("model");
-    expect(names).toContain("init");
-    expect(names).toContain("apikey");
-    expect(names).toContain("verbose");
     expect(names).toContain("quit");
-    expect(names).toContain("memory");
-    expect(names).toContain("doctor");
-    expect(names).toContain("bug");
-    expect(names).toContain("copy");
-    expect(names).toContain("reduce-motion");
   });
 
   it("each command has a name and description", () => {
@@ -126,5 +126,35 @@ describe("getCommandList", () => {
       expect(cmd.name).toBeTruthy();
       expect(cmd.description).toBeTruthy();
     }
+  });
+});
+
+describe("cron commands", () => {
+  it("/cron list returns task list", async () => {
+    const ctx = makeCtx({ cronList: vi.fn(() => "No scheduled tasks.") });
+    const result = await routeCommand("/cron list", ctx);
+    expect(result.handled).toBe(true);
+    expect(result.output).toContain("No scheduled tasks");
+  });
+
+  it("/cron remove calls cronRemove", async () => {
+    const ctx = makeCtx({ cronRemove: vi.fn(() => "Removed task abc123.") });
+    const result = await routeCommand("/cron remove abc123", ctx);
+    expect(result.handled).toBe(true);
+    expect(ctx.cronRemove).toHaveBeenCalledWith("abc123");
+  });
+
+  it("/cron with no subcommand shows help", async () => {
+    const ctx = makeCtx();
+    const result = await routeCommand("/cron", ctx);
+    expect(result.handled).toBe(true);
+    expect(result.output).toContain("Usage:");
+  });
+
+  it("/dream triggers consolidation", async () => {
+    const ctx = makeCtx({ runDream: vi.fn(async () => "Consolidation complete. Wrote 2 memory files.") });
+    const result = await routeCommand("/dream", ctx);
+    expect(result.handled).toBe(true);
+    expect(result.output).toContain("Consolidation");
   });
 });

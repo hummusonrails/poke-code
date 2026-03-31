@@ -18,6 +18,13 @@ export interface CommandContext {
   copyLastMessage: () => string;
   getReducedMotion: () => boolean;
   setReducedMotion: (on: boolean) => void;
+  cronAdd: (scheduleOrNatural: string, prompt: string) => Promise<string>;
+  cronList: () => string;
+  cronRemove: (id: string) => string;
+  cronResults: (id?: string) => string;
+  cronInstall: () => string;
+  cronUninstall: () => string;
+  runDream: () => Promise<string>;
 }
 
 export interface CommandResult {
@@ -142,6 +149,71 @@ registerCommand('reduce-motion', 'Toggle reduced motion (disable animations)', (
   const current = ctx.getReducedMotion();
   ctx.setReducedMotion(!current);
   return { output: `Reduced motion ${!current ? 'on' : 'off'} — animations ${!current ? 'disabled' : 'enabled'}.`, handled: true };
+});
+
+registerCommand("cron", "Manage scheduled prompts", async (ctx, args) => {
+  const parts = args.split(/\s+/);
+  const sub = parts[0] || "";
+  const rest = parts.slice(1).join(" ");
+
+  switch (sub) {
+    case "list":
+      return { output: ctx.cronList(), handled: true };
+    case "remove": {
+      if (!rest) return { output: "Usage: /cron remove <id>", handled: true };
+      return { output: ctx.cronRemove(rest), handled: true };
+    }
+    case "results": {
+      return { output: ctx.cronResults(rest || undefined), handled: true };
+    }
+    case "add": {
+      const cronParts = rest.split(/\s+/);
+      if (cronParts.length < 6) {
+        return { output: "Usage: /cron add <min> <hr> <dom> <mon> <dow> <prompt>", handled: true };
+      }
+      const schedule = cronParts.slice(0, 5).join(" ");
+      const prompt = cronParts.slice(5).join(" ");
+      const result = await ctx.cronAdd(schedule, prompt);
+      return { output: result, handled: true };
+    }
+    case "once": {
+      const cronParts = rest.split(/\s+/);
+      if (cronParts.length < 6) {
+        return { output: "Usage: /cron once <min> <hr> <dom> <mon> <dow> <prompt>", handled: true };
+      }
+      const schedule = cronParts.slice(0, 5).join(" ");
+      const prompt = cronParts.slice(5).join(" ");
+      const result = await ctx.cronAdd(schedule, prompt + " [oneshot]");
+      return { output: result, handled: true };
+    }
+    case "install":
+      return { output: ctx.cronInstall(), handled: true };
+    case "uninstall":
+      return { output: ctx.cronUninstall(), handled: true };
+    default: {
+      if (args.trim()) {
+        const result = await ctx.cronAdd(args, "");
+        return { output: result, handled: true };
+      }
+      return {
+        output: `Usage:
+  /cron add <cron-expr> <prompt>     — schedule a recurring task
+  /cron once <cron-expr> <prompt>    — schedule a one-shot task
+  /cron every 30 minutes <prompt>    — natural language scheduling
+  /cron list                         — list all tasks
+  /cron remove <id>                  — remove a task
+  /cron results [id]                 — view execution results
+  /cron install                      — install macOS launchd auto-start
+  /cron uninstall                    — remove launchd auto-start`,
+        handled: true,
+      };
+    }
+  }
+});
+
+registerCommand("dream", "Consolidate session memories", async (ctx) => {
+  const result = await ctx.runDream();
+  return { output: result, handled: true };
 });
 
 registerCommand("quit", "Exit the CLI", (ctx) => {
