@@ -33,4 +33,4 @@ jobs:
           node-version: 22
           cache: 'npm'
       - run: npm ci
-      - run: npx @biomejs/biome ci src/ bin/ test/
+      - run: npx @biomejs/biome check src/ bin/ test/

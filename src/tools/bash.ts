@@ -14,7 +14,7 @@ export async function bashTool(params: BashParams): Promise<string> {
     const { stdout, stderr } = await execAsync(params.command, {
       timeout,
       maxBuffer: 10 * 1024 * 1024,
-      shell: "/bin/zsh",
+      shell: process.env.SHELL || "/bin/sh",
     });
     const output = [stdout, stderr].filter(Boolean).join("\n");
     return output || "(no output)";
