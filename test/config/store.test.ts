@@ -97,4 +97,21 @@ describe("ConfigStore", () => {
     const store = new ConfigStore(dir);
     expect(store.getConfigDir()).toBe(dir);
   });
+
+  it("loads autoDream config with defaults", () => {
+    const dir = tempDir("autodream-defaults");
+    const store = new ConfigStore(dir);
+    const config = store.load();
+    expect(config.autoDream).toEqual({ enabled: true, minHours: 24, minSessions: 5 });
+  });
+
+  it("merges partial autoDream config", () => {
+    const dir = tempDir("autodream-partial");
+    const store = new ConfigStore(dir);
+    store.save({ ...DEFAULT_CONFIG, autoDream: { enabled: false, minHours: 12, minSessions: 3 } });
+    const loaded = store.load();
+    expect(loaded.autoDream.enabled).toBe(false);
+    expect(loaded.autoDream.minHours).toBe(12);
+    expect(loaded.autoDream.minSessions).toBe(3);
+  });
 });
