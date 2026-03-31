@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ConfigError } from "../errors.js";
 import type { PokeConfig } from "../types.js";
 import { DEFAULT_CONFIG } from "../types.js";
 
@@ -17,7 +18,10 @@ export class ConfigStore {
     try {
       const raw = readFileSync(this.configPath, "utf-8");
       return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-    } catch {
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        throw new ConfigError(`Failed to parse config: ${err.message}`, this.configPath);
+      }
       return { ...DEFAULT_CONFIG };
     }
   }

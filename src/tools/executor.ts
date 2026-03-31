@@ -1,3 +1,4 @@
+import { PermissionError, ToolError } from "../errors.js";
 import type { PermissionMode, ToolCall, ToolEvent, ToolResult } from "../types.js";
 import { bashTool } from "./bash.js";
 import { editFileTool } from "./edit-file.js";
@@ -32,22 +33,24 @@ export async function* executeTool(
 ): AsyncGenerator<ToolEvent> {
   const fn = toolFunctions[call.tool];
   if (!fn) {
+    const toolErr = new ToolError(`Unknown tool: ${call.tool}`, call.tool, call.params);
     yield {
       type: "result",
-      result: { tool: call.tool, params: call.params, output: "", error: `Unknown tool: ${call.tool}` },
+      result: { tool: call.tool, params: call.params, output: "", error: toolErr.message },
     };
     return;
   }
 
   const permission = registry.getPermission(call.tool, mode);
   if (permission === "deny") {
+    const permErr = new PermissionError(`Tool ${call.tool} is denied in ${mode} mode`, call.tool, mode);
     yield {
       type: "result",
       result: {
         tool: call.tool,
         params: call.params,
         output: "",
-        error: `Tool ${call.tool} is denied in ${mode} mode`,
+        error: permErr.message,
       },
     };
     return;
@@ -71,7 +74,8 @@ export async function* executeTool(
     yield { type: "result", result: { tool: call.tool, params: call.params, output } };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    yield { type: "result", result: { tool: call.tool, params: call.params, output: "", error: message } };
+    const toolErr = new ToolError(message, call.tool, call.params);
+    yield { type: "result", result: { tool: call.tool, params: call.params, output: "", error: toolErr.message } };
   }
 }
 

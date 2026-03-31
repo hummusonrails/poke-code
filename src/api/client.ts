@@ -1,3 +1,5 @@
+import { ApiError } from "../errors.js";
+
 const POKE_API_URL = "https://poke.com/api/v1/inbound/api-message";
 
 export interface PokeApiResponse {
@@ -38,9 +40,9 @@ export class PokeApiClient {
           }
         }
 
-        throw new Error(`Poke API error: ${response.status} ${response.statusText}`);
+        throw new ApiError(`Poke API error: ${response.status} ${response.statusText}`, response.status);
       } catch (err) {
-        if (err instanceof Error && err.message.startsWith("Poke API error:")) {
+        if (err instanceof ApiError) {
           throw err;
         }
         if (attempt === retries - 1) throw err;

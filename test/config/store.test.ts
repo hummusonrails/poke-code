@@ -61,12 +61,11 @@ describe("ConfigStore", () => {
     expect(loaded.theme).toBe("light");
   });
 
-  it("returns defaults when config file is corrupt", () => {
+  it("throws ConfigError when config file is corrupt", () => {
     const dir = tempDir("corrupt");
     writeFileSync(join(dir, "config.json"), "not valid json", "utf-8");
     const store = new ConfigStore(dir);
-    const config = store.load();
-    expect(config).toEqual(DEFAULT_CONFIG);
+    expect(() => store.load()).toThrow("Failed to parse config:");
   });
 
   it("resolves api key from config file", () => {
