@@ -1,27 +1,26 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { render, Box, Text, useInput } from 'ink';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
-import type { PermissionMode, ToolCall, ToolResult } from './types.js';
-import { ConfigStore } from './config/store.js';
-import { PokeApiClient } from './api/client.js';
-import { ChatDbPoller } from './db/poller.js';
-import { conversationLoop, createPollFn } from './api/conversation.js';
-import { imsgSend, canImsgSend } from './db/imsg-sender.js';
-import { ToolRegistry } from './tools/registry.js';
-import { ToolExecutor } from './tools/executor.js';
-import { ContextBuilder } from './context/builder.js';
-import { SessionManager } from './session/manager.js';
-import { routeCommand } from './commands/router.js';
-import { MessageView } from './ui/message.js';
-import { Spinner } from './ui/spinner.js';
-import { StatusLine } from './ui/status-line.js';
-import { PermissionPrompt } from './ui/permission.js';
-import { ToolSummary } from './ui/tool-call.js';
-import { Welcome } from './ui/welcome.js';
-import { stripCommands } from './parser/strip-commands.js';
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { Box, render, Text, useInput } from "ink";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { PokeApiClient } from "./api/client.js";
+import { conversationLoop, createPollFn } from "./api/conversation.js";
+import { routeCommand } from "./commands/router.js";
+import { ConfigStore } from "./config/store.js";
+import { ContextBuilder } from "./context/builder.js";
+import { imsgSend } from "./db/imsg-sender.js";
+import { ChatDbPoller } from "./db/poller.js";
+import { stripCommands } from "./parser/strip-commands.js";
+import { SessionManager } from "./session/manager.js";
+import { ToolExecutor } from "./tools/executor.js";
+import { ToolRegistry } from "./tools/registry.js";
+import type { PermissionMode, ToolCall, ToolResult } from "./types.js";
+import { MessageView } from "./ui/message.js";
+import { PermissionPrompt } from "./ui/permission.js";
+import { Spinner } from "./ui/spinner.js";
+import { StatusLine } from "./ui/status-line.js";
+import { Welcome } from "./ui/welcome.js";
 
 export interface AppProps {
   apiKey: string;
@@ -38,7 +37,7 @@ export interface AppProps {
 }
 
 interface UiMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
 }
 
@@ -71,19 +70,19 @@ function App(props: AppProps) {
   } = props;
 
   const [messages, setMessages] = useState<UiMessage[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [multiLine, setMultiLine] = useState(false);
   const [waiting, setWaiting] = useState(false);
-  const [toolResults, setToolResults] = useState<ToolResult[]>([]);
+  const [_toolResults, setToolResults] = useState<ToolResult[]>([]);
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermissionMode);
   const [verboseMode, setVerboseMode] = useState(verbose ?? false);
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
-  const [sessionId, setSessionId] = useState('');
+  const [sessionId, setSessionId] = useState("");
   const [messageCount, setMessageCount] = useState(0);
   const [showWelcome, setShowWelcome] = useState(true);
   const [recentSessions, setRecentSessions] = useState<{ id: string; lastActiveAt: string; cwd: string }[]>([]);
   const startTime = useRef(new Date());
-  const [elapsed, setElapsed] = useState('0s');
+  const [elapsed, setElapsed] = useState("0s");
 
   // Core service instances (created once)
   const apiClient = useRef(new PokeApiClient(apiKey));
@@ -101,11 +100,7 @@ function App(props: AppProps) {
     });
   }, []);
 
-  const executor = useRef(new ToolExecutor(
-    registry.current,
-    permissionMode,
-    promptForPermission,
-  ));
+  const executor = useRef(new ToolExecutor(registry.current, permissionMode, promptForPermission));
 
   // Keep executor mode in sync
   useEffect(() => {
@@ -121,7 +116,7 @@ function App(props: AppProps) {
   // Initialize session + load recent sessions for welcome
   useEffect(() => {
     const recent = sessionManager.current.list();
-    setRecentSessions(recent.map(s => ({ id: s.id, lastActiveAt: s.lastActiveAt, cwd: s.cwd })));
+    setRecentSessions(recent.map((s) => ({ id: s.id, lastActiveAt: s.lastActiveAt, cwd: s.cwd })));
 
     let session;
     if (resumeSessionId) {
@@ -130,10 +125,10 @@ function App(props: AppProps) {
         const entries = sessionManager.current.loadEntries(resumeSessionId);
         const loaded: UiMessage[] = [];
         for (const entry of entries) {
-          if (entry.role === 'user' && entry.content) {
-            loaded.push({ role: 'user', content: entry.content });
-          } else if (entry.role === 'assistant' && entry.content) {
-            loaded.push({ role: 'assistant', content: entry.content });
+          if (entry.role === "user" && entry.content) {
+            loaded.push({ role: "user", content: entry.content });
+          } else if (entry.role === "assistant" && entry.content) {
+            loaded.push({ role: "assistant", content: entry.content });
           }
         }
         setMessages(loaded);
@@ -145,7 +140,7 @@ function App(props: AppProps) {
       session = sessionManager.current.create(cwd);
     }
     setSessionId(session.id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resumeSessionId, cwd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set up chat.db poller for receiving messages
   useEffect(() => {
@@ -158,286 +153,345 @@ function App(props: AppProps) {
         lastSeenRowId.current = initial[initial.length - 1].rowId;
       }
       pollerRef.current = poller;
-      return () => { poller.close(); };
+      return () => {
+        poller.close();
+      };
     } catch {
       // DB not accessible
     }
   }, [chatId, handleId, dbPath]);
 
   const appendMessage = useCallback((msg: UiMessage) => {
-    setMessages(prev => [...prev, msg]);
-    setMessageCount(prev => prev + 1);
+    setMessages((prev) => [...prev, msg]);
+    setMessageCount((prev) => prev + 1);
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  const handleSend = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
 
-    // Hide welcome on first message
-    if (showWelcome) setShowWelcome(false);
+      // Hide welcome on first message
+      if (showWelcome) setShowWelcome(false);
 
-    // Check slash commands
-    if (trimmed.startsWith('/')) {
-      const ctx = {
-        clearScreen: () => setMessages([]),
-        getHistory: () => messages.map(m => `${m.role}: ${m.content}`),
-        listSessions: () => sessionManager.current.list().map(s => `${s.id.slice(0, 8)} ${s.lastActiveAt} ${s.cwd}`).join('\n') || 'No sessions.',
-        resumeSession: (id: string) => {
-          const entries = sessionManager.current.loadEntries(id);
-          const loaded: UiMessage[] = [];
-          for (const entry of entries) {
-            if (entry.role === 'user' && entry.content) loaded.push({ role: 'user', content: entry.content });
-            else if (entry.role === 'assistant' && entry.content) loaded.push({ role: 'assistant', content: entry.content });
-          }
-          setMessages(loaded);
-        },
-        getPermissionMode: () => permissionMode,
-        setPermissionMode: (mode: string) => {
-          if (mode === 'default' || mode === 'trusted' || mode === 'readonly') {
-            setPermissionMode(mode as PermissionMode);
-          }
-        },
-        getStatus: () => `API: connected  chatId: ${chatId ?? 'not configured'}  handleId: ${handleId ?? 'not configured'}`,
-        getConfig: () => `configDir: ${configDir}  cwd: ${cwd}  permissionMode: ${permissionMode}`,
-        toggleVerbose: () => { const next = !verboseMode; setVerboseMode(next); return next; },
-        getVerbose: () => verboseMode,
-        compact: async () => {
-          const { compactHistory } = await import('./session/compactor.js');
-          const entries = sessionManager.current.loadEntries(sessionId);
-          const summary = compactHistory(entries);
-          setMessages([{ role: 'system', content: `Context compacted. Summary: ${summary}` }]);
-        },
-        setApiKey: (key: string) => {
-          const store = new ConfigStore(configDir);
-          store.update({ apiKey: key });
-          apiClient.current = new PokeApiClient(key);
-        },
-        quit: () => process.exit(0),
-        getMemoryList: () => {
-          const dirs = [
-            join(cwd, '.poke/memory'),
-            join(cwd, '.claude/memory'),
-            join(configDir, 'memory'),
-          ];
-          const files: string[] = [];
-          for (const dir of dirs) {
-            if (!existsSync(dir)) continue;
-            for (const f of readdirSync(dir).filter((f: string) => f.endsWith('.md'))) {
-              const content = readFileSync(join(dir, f), 'utf-8');
-              const firstLine = content.split('\n').find((l: string) => l.trim() && !l.startsWith('---')) ?? '';
-              files.push(`  ${f} — ${firstLine.trim().slice(0, 60)}`);
+      // Check slash commands
+      if (trimmed.startsWith("/")) {
+        const ctx = {
+          clearScreen: () => setMessages([]),
+          getHistory: () => messages.map((m) => `${m.role}: ${m.content}`),
+          listSessions: () =>
+            sessionManager.current
+              .list()
+              .map((s) => `${s.id.slice(0, 8)} ${s.lastActiveAt} ${s.cwd}`)
+              .join("\n") || "No sessions.",
+          resumeSession: (id: string) => {
+            const entries = sessionManager.current.loadEntries(id);
+            const loaded: UiMessage[] = [];
+            for (const entry of entries) {
+              if (entry.role === "user" && entry.content) loaded.push({ role: "user", content: entry.content });
+              else if (entry.role === "assistant" && entry.content)
+                loaded.push({ role: "assistant", content: entry.content });
             }
-          }
-          return files.length > 0 ? `Memory files:\n${files.join('\n')}` : 'No memory files found.';
-        },
-        getMemoryContent: (name: string) => {
-          const dirs = [
-            join(cwd, '.poke/memory'),
-            join(cwd, '.claude/memory'),
-            join(configDir, 'memory'),
-          ];
-          for (const dir of dirs) {
-            const p = join(dir, name.endsWith('.md') ? name : `${name}.md`);
-            if (existsSync(p)) return readFileSync(p, 'utf-8');
-          }
-          return `Memory file "${name}" not found.`;
-        },
-        runDiagnostics: async () => {
-          const checks: string[] = [];
+            setMessages(loaded);
+          },
+          getPermissionMode: () => permissionMode,
+          setPermissionMode: (mode: string) => {
+            if (mode === "default" || mode === "trusted" || mode === "readonly") {
+              setPermissionMode(mode as PermissionMode);
+            }
+          },
+          getStatus: () =>
+            `API: connected  chatId: ${chatId ?? "not configured"}  handleId: ${handleId ?? "not configured"}`,
+          getConfig: () => `configDir: ${configDir}  cwd: ${cwd}  permissionMode: ${permissionMode}`,
+          toggleVerbose: () => {
+            const next = !verboseMode;
+            setVerboseMode(next);
+            return next;
+          },
+          getVerbose: () => verboseMode,
+          compact: async () => {
+            const { compactHistory } = await import("./session/compactor.js");
+            const entries = sessionManager.current.loadEntries(sessionId);
+            const summary = compactHistory(entries);
+            setMessages([{ role: "system", content: `Context compacted. Summary: ${summary}` }]);
+          },
+          setApiKey: (key: string) => {
+            const store = new ConfigStore(configDir);
+            store.update({ apiKey: key });
+            apiClient.current = new PokeApiClient(key);
+          },
+          quit: () => process.exit(0),
+          getMemoryList: () => {
+            const dirs = [join(cwd, ".poke/memory"), join(cwd, ".claude/memory"), join(configDir, "memory")];
+            const files: string[] = [];
+            for (const dir of dirs) {
+              if (!existsSync(dir)) continue;
+              for (const f of readdirSync(dir).filter((f: string) => f.endsWith(".md"))) {
+                const content = readFileSync(join(dir, f), "utf-8");
+                const firstLine = content.split("\n").find((l: string) => l.trim() && !l.startsWith("---")) ?? "";
+                files.push(`  ${f} — ${firstLine.trim().slice(0, 60)}`);
+              }
+            }
+            return files.length > 0 ? `Memory files:\n${files.join("\n")}` : "No memory files found.";
+          },
+          getMemoryContent: (name: string) => {
+            const dirs = [join(cwd, ".poke/memory"), join(cwd, ".claude/memory"), join(configDir, "memory")];
+            for (const dir of dirs) {
+              const p = join(dir, name.endsWith(".md") ? name : `${name}.md`);
+              if (existsSync(p)) return readFileSync(p, "utf-8");
+            }
+            return `Memory file "${name}" not found.`;
+          },
+          runDiagnostics: async () => {
+            const checks: string[] = [];
 
-          // API key
-          const apiKey = new ConfigStore(configDir).resolveApiKey();
-          checks.push(apiKey ? '✓ API key configured' : '✗ API key not set — run poke-code --init');
+            // API key
+            const apiKey = new ConfigStore(configDir).resolveApiKey();
+            checks.push(apiKey ? "✓ API key configured" : "✗ API key not set — run poke-code --init");
 
-          // chat.db
-          const dbExists = existsSync(join(homedir(), 'Library/Messages/chat.db'));
-          checks.push(dbExists ? '✓ chat.db accessible' : '✗ chat.db not found — grant Full Disk Access to terminal');
+            // chat.db
+            const dbExists = existsSync(join(homedir(), "Library/Messages/chat.db"));
+            checks.push(dbExists ? "✓ chat.db accessible" : "✗ chat.db not found — grant Full Disk Access to terminal");
 
-          // chatId/handleId
-          const config = new ConfigStore(configDir).load();
-          checks.push(config.chatId ? `✓ chatId: ${config.chatId}` : '✗ chatId not configured — run poke-code --init');
-          checks.push(config.handleId ? `✓ handleId: ${config.handleId}` : '⚠ handleId not configured');
+            // chatId/handleId
+            const config = new ConfigStore(configDir).load();
+            checks.push(
+              config.chatId ? `✓ chatId: ${config.chatId}` : "✗ chatId not configured — run poke-code --init",
+            );
+            checks.push(config.handleId ? `✓ handleId: ${config.handleId}` : "⚠ handleId not configured");
 
-          // imsg
-          try {
-            execFileSync('imsg', ['--version'], { timeout: 3000 });
-            checks.push('✓ imsg CLI installed');
-          } catch {
-            checks.push('⚠ imsg not installed (optional — install: brew install steipete/tap/imsg)');
-          }
+            // imsg
+            try {
+              execFileSync("imsg", ["--version"], { timeout: 3000 });
+              checks.push("✓ imsg CLI installed");
+            } catch {
+              checks.push("⚠ imsg not installed (optional — install: brew install steipete/tap/imsg)");
+            }
 
-          // Node version
-          const nodeVersion = process.version;
-          const major = parseInt(nodeVersion.slice(1));
-          checks.push(major >= 20 ? `✓ Node.js ${nodeVersion}` : `⚠ Node.js ${nodeVersion} — recommended ≥ 20`);
+            // Node version
+            const nodeVersion = process.version;
+            const major = parseInt(nodeVersion.slice(1), 10);
+            checks.push(major >= 20 ? `✓ Node.js ${nodeVersion}` : `⚠ Node.js ${nodeVersion} — recommended ≥ 20`);
 
-          // Project context
-          const hasPoke = existsSync(join(cwd, 'POKE.md'));
-          const hasClaude = existsSync(join(cwd, 'CLAUDE.md'));
-          checks.push(hasPoke || hasClaude ? `✓ Project context: ${hasPoke ? 'POKE.md' : 'CLAUDE.md'}` : '⚠ No POKE.md or CLAUDE.md in project');
+            // Project context
+            const hasPoke = existsSync(join(cwd, "POKE.md"));
+            const hasClaude = existsSync(join(cwd, "CLAUDE.md"));
+            checks.push(
+              hasPoke || hasClaude
+                ? `✓ Project context: ${hasPoke ? "POKE.md" : "CLAUDE.md"}`
+                : "⚠ No POKE.md or CLAUDE.md in project",
+            );
 
-          // Skills
-          const skillCount = contextBuilder.current.listSkills().length;
-          checks.push(`✓ ${skillCount} skills discovered`);
+            // Skills
+            const skillCount = contextBuilder.current.listSkills().length;
+            checks.push(`✓ ${skillCount} skills discovered`);
 
-          // Config file
-          checks.push(existsSync(join(configDir, 'config.json')) ? '✓ Config file exists' : '⚠ No config file');
+            // Config file
+            checks.push(existsSync(join(configDir, "config.json")) ? "✓ Config file exists" : "⚠ No config file");
 
-          return `Diagnostics:\n${checks.join('\n')}`;
-        },
-        copyLastMessage: () => {
-          const lastAssistant = messages.slice().reverse().find((m: UiMessage) => m.role === 'assistant');
-          if (!lastAssistant) return 'No assistant message to copy.';
-          try {
-            const { execSync } = require('node:child_process');
-            execSync('pbcopy', { input: lastAssistant.content, timeout: 3000 });
-            return 'Copied last response to clipboard.';
-          } catch {
-            return 'Failed to copy to clipboard.';
-          }
-        },
-      };
+            return `Diagnostics:\n${checks.join("\n")}`;
+          },
+          copyLastMessage: () => {
+            const lastAssistant = messages
+              .slice()
+              .reverse()
+              .find((m: UiMessage) => m.role === "assistant");
+            if (!lastAssistant) return "No assistant message to copy.";
+            try {
+              const { execSync } = require("node:child_process");
+              execSync("pbcopy", { input: lastAssistant.content, timeout: 3000 });
+              return "Copied last response to clipboard.";
+            } catch {
+              return "Failed to copy to clipboard.";
+            }
+          },
+        };
 
-      const result = await routeCommand(trimmed, ctx);
-      if (result.handled && result.output) {
-        appendMessage({ role: 'system', content: result.output });
-      }
-      return;
-    }
-
-    appendMessage({ role: 'user', content: trimmed });
-    if (sessionId) {
-      sessionManager.current.append(sessionId, { role: 'user', content: trimmed, timestamp: new Date().toISOString() });
-    }
-
-    setWaiting(true);
-    setToolResults([]);
-
-    try {
-      // Build pollFn from chat.db poller
-      if (!pollerRef.current) {
-        const fullMessage = contextBuilder.current.build(trimmed, systemPrompt);
-        await apiClient.current.sendMessage(fullMessage);
-        appendMessage({ role: 'system', content: 'Message sent. (Set chatId/handleId in ~/.poke/config.json to receive responses)' });
-        setWaiting(false);
+        const result = await routeCommand(trimmed, ctx);
+        if (result.handled && result.output) {
+          appendMessage({ role: "system", content: result.output });
+        }
         return;
       }
 
-      const pollFn = createPollFn(pollerRef.current, lastSeenRowId.current, {
-        onRowIdAdvance: (rowId) => { lastSeenRowId.current = rowId; },
-      });
+      appendMessage({ role: "user", content: trimmed });
+      if (sessionId) {
+        sessionManager.current.append(sessionId, {
+          role: "user",
+          content: trimmed,
+          timestamp: new Date().toISOString(),
+        });
+      }
 
-      // Use imsg send for tool results when available (bypasses Poke API, more reliable for large payloads)
-      const sendResultsFn = chatId
-        ? (text: string) => imsgSend(chatId, text)
-        : undefined;
+      setWaiting(true);
+      setToolResults([]);
 
-      const events = conversationLoop(trimmed, {
-        apiClient: apiClient.current,
-        executor: executor.current,
-        contextBuilder: contextBuilder.current,
-        cwd,
-        systemPrompt,
-        noTools,
-        pollFn,
-        sendResultsFn,
-      });
-
-      let pendingToolResults: ToolResult[] = [];
-
-      for await (const event of events) {
-        switch (event.type) {
-          case 'text': {
-            // Strip bracket commands from displayed text
-            const clean = stripCommands(event.content);
-            if (clean) {
-              appendMessage({ role: 'assistant', content: clean });
-            }
-            if (sessionId) {
-              sessionManager.current.append(sessionId, { role: 'assistant', content: event.content, timestamp: new Date().toISOString() });
-            }
-            break;
-          }
-          case 'tool_use':
-            // Don't show per-tool messages — wait for batch summary
-            break;
-          case 'tool_result':
-            pendingToolResults.push(event.result);
-            setToolResults(prev => [...prev, event.result]);
-            if (verboseMode) {
-              const label = event.result.params['path'] ?? event.result.params['command'] ?? '';
-              const preview = event.result.error
-                ? `Error: ${event.result.error}`
-                : event.result.output.slice(0, 200);
-              appendMessage({ role: 'system', content: `  ◆ ${event.result.tool} ${label}\n    ${preview}` });
-            }
-            if (sessionId) {
-              sessionManager.current.append(sessionId, {
-                role: 'tool',
-                toolCalls: [{ tool: event.result.tool, params: event.result.params }],
-                results: [event.result],
-                timestamp: new Date().toISOString(),
-              });
-            }
-            break;
-          case 'sending_results':
-            appendMessage({ role: 'system', content: `  ↑ sending ${event.count} result${event.count > 1 ? 's' : ''} to Poke...` });
-            break;
-          case 'error':
-            appendMessage({ role: 'system', content: `Error: ${event.message}` });
-            break;
-          case 'done':
-            break;
+      try {
+        // Build pollFn from chat.db poller
+        if (!pollerRef.current) {
+          const fullMessage = contextBuilder.current.build(trimmed, systemPrompt);
+          await apiClient.current.sendMessage(fullMessage);
+          appendMessage({
+            role: "system",
+            content: "Message sent. (Set chatId/handleId in ~/.poke/config.json to receive responses)",
+          });
+          setWaiting(false);
+          return;
         }
 
-        // When we transition from tool_result to a non-tool event, flush the summary
-        if (event.type !== 'tool_result' && pendingToolResults.length > 0) {
+        const pollFn = createPollFn(pollerRef.current, lastSeenRowId.current, {
+          onRowIdAdvance: (rowId) => {
+            lastSeenRowId.current = rowId;
+          },
+        });
+
+        // Use imsg send for tool results when available (bypasses Poke API, more reliable for large payloads)
+        const sendResultsFn = chatId ? (text: string) => imsgSend(chatId, text) : undefined;
+
+        const events = conversationLoop(trimmed, {
+          apiClient: apiClient.current,
+          executor: executor.current,
+          contextBuilder: contextBuilder.current,
+          cwd,
+          systemPrompt,
+          noTools,
+          pollFn,
+          sendResultsFn,
+        });
+
+        let pendingToolResults: ToolResult[] = [];
+
+        for await (const event of events) {
+          switch (event.type) {
+            case "text": {
+              // Strip bracket commands from displayed text
+              const clean = stripCommands(event.content);
+              if (clean) {
+                appendMessage({ role: "assistant", content: clean });
+              }
+              if (sessionId) {
+                sessionManager.current.append(sessionId, {
+                  role: "assistant",
+                  content: event.content,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+              break;
+            }
+            case "tool_use":
+              // Don't show per-tool messages — wait for batch summary
+              break;
+            case "tool_result":
+              pendingToolResults.push(event.result);
+              setToolResults((prev) => [...prev, event.result]);
+              if (verboseMode) {
+                const label = event.result.params.path ?? event.result.params.command ?? "";
+                const preview = event.result.error ? `Error: ${event.result.error}` : event.result.output.slice(0, 200);
+                appendMessage({ role: "system", content: `  ◆ ${event.result.tool} ${label}\n    ${preview}` });
+              }
+              if (sessionId) {
+                sessionManager.current.append(sessionId, {
+                  role: "tool",
+                  toolCalls: [{ tool: event.result.tool, params: event.result.params }],
+                  results: [event.result],
+                  timestamp: new Date().toISOString(),
+                });
+              }
+              break;
+            case "sending_results":
+              appendMessage({
+                role: "system",
+                content: `  ↑ sending ${event.count} result${event.count > 1 ? "s" : ""} to Poke...`,
+              });
+              break;
+            case "error":
+              appendMessage({ role: "system", content: `Error: ${event.message}` });
+              break;
+            case "done":
+              break;
+          }
+
+          // When we transition from tool_result to a non-tool event, flush the summary
+          if (event.type !== "tool_result" && pendingToolResults.length > 0) {
+            const counts = new Map<string, number>();
+            for (const r of pendingToolResults) {
+              const short =
+                r.tool === "read_file"
+                  ? "read"
+                  : r.tool === "list_dir"
+                    ? "list"
+                    : r.tool === "write_file"
+                      ? "write"
+                      : r.tool === "edit_file"
+                        ? "edit"
+                        : r.tool;
+              counts.set(short, (counts.get(short) ?? 0) + 1);
+            }
+            const errors = pendingToolResults.filter((r) => r.error).length;
+            const parts = Array.from(counts.entries()).map(([t, c]) => (c > 1 ? `${c} ${t}` : t));
+            let summary = `  ◆ ${parts.join(", ")}`;
+            if (errors > 0) summary += ` (${errors} failed)`;
+            appendMessage({ role: "system", content: summary });
+            pendingToolResults = [];
+          }
+        }
+
+        // Flush any remaining tool results at the end
+        if (pendingToolResults.length > 0) {
           const counts = new Map<string, number>();
           for (const r of pendingToolResults) {
-            const short = r.tool === 'read_file' ? 'read' : r.tool === 'list_dir' ? 'list' : r.tool === 'write_file' ? 'write' : r.tool === 'edit_file' ? 'edit' : r.tool;
+            const short =
+              r.tool === "read_file"
+                ? "read"
+                : r.tool === "list_dir"
+                  ? "list"
+                  : r.tool === "write_file"
+                    ? "write"
+                    : r.tool === "edit_file"
+                      ? "edit"
+                      : r.tool;
             counts.set(short, (counts.get(short) ?? 0) + 1);
           }
-          const errors = pendingToolResults.filter(r => r.error).length;
-          const parts = Array.from(counts.entries()).map(([t, c]) => c > 1 ? `${c} ${t}` : t);
-          let summary = `  ◆ ${parts.join(', ')}`;
+          const errors = pendingToolResults.filter((r) => r.error).length;
+          const parts = Array.from(counts.entries()).map(([t, c]) => (c > 1 ? `${c} ${t}` : t));
+          let summary = `  ◆ ${parts.join(", ")}`;
           if (errors > 0) summary += ` (${errors} failed)`;
-          appendMessage({ role: 'system', content: summary });
-          pendingToolResults = [];
+          appendMessage({ role: "system", content: summary });
         }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        appendMessage({ role: "system", content: `Error: ${msg}` });
+      } finally {
+        setWaiting(false);
+        setPendingPermission(null);
       }
-
-      // Flush any remaining tool results at the end
-      if (pendingToolResults.length > 0) {
-        const counts = new Map<string, number>();
-        for (const r of pendingToolResults) {
-          const short = r.tool === 'read_file' ? 'read' : r.tool === 'list_dir' ? 'list' : r.tool === 'write_file' ? 'write' : r.tool === 'edit_file' ? 'edit' : r.tool;
-          counts.set(short, (counts.get(short) ?? 0) + 1);
-        }
-        const errors = pendingToolResults.filter(r => r.error).length;
-        const parts = Array.from(counts.entries()).map(([t, c]) => c > 1 ? `${c} ${t}` : t);
-        let summary = `  ◆ ${parts.join(', ')}`;
-        if (errors > 0) summary += ` (${errors} failed)`;
-        appendMessage({ role: 'system', content: summary });
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      appendMessage({ role: 'system', content: `Error: ${msg}` });
-    } finally {
-      setWaiting(false);
-      setPendingPermission(null);
-    }
-  }, [messages, permissionMode, verboseMode, chatId, handleId, sessionId, noTools, systemPrompt, showWelcome, appendMessage, configDir, cwd]);
+    },
+    [
+      messages,
+      permissionMode,
+      verboseMode,
+      chatId,
+      handleId,
+      sessionId,
+      noTools,
+      systemPrompt,
+      showWelcome,
+      appendMessage,
+      configDir,
+      cwd,
+    ],
+  );
 
   useInput((ch, key) => {
     // Handle pending permission prompt
     if (pendingPermission) {
-      if (ch === 'y' || ch === 'Y') {
+      if (ch === "y" || ch === "Y") {
         pendingPermission.resolve(true);
         setPendingPermission(null);
-      } else if (ch === 'n' || ch === 'N') {
+      } else if (ch === "n" || ch === "N") {
         pendingPermission.resolve(false);
         setPendingPermission(null);
-      } else if (ch === 'a' || ch === 'A') {
+      } else if (ch === "a" || ch === "A") {
         alwaysAllowed.current.add(pendingPermission.toolCall.tool);
         pendingPermission.resolve(true);
         setPendingPermission(null);
@@ -447,54 +501,48 @@ function App(props: AppProps) {
 
     if (key.return) {
       if (multiLine) {
-        setInput(prev => prev + '\n');
+        setInput((prev) => `${prev}\n`);
       } else {
         const toSend = input;
-        setInput('');
+        setInput("");
         void handleSend(toSend);
       }
       return;
     }
 
     // Ctrl+D in multi-line mode: submit
-    if (key.ctrl && ch === 'd' && multiLine) {
+    if (key.ctrl && ch === "d" && multiLine) {
       const toSend = input;
-      setInput('');
+      setInput("");
       setMultiLine(false);
       void handleSend(toSend);
       return;
     }
 
     // Ctrl+E: toggle multi-line mode
-    if (key.ctrl && ch === 'e') {
-      setMultiLine(prev => !prev);
+    if (key.ctrl && ch === "e") {
+      setMultiLine((prev) => !prev);
       return;
     }
 
     if (key.backspace || key.delete) {
-      setInput(prev => prev.slice(0, -1));
+      setInput((prev) => prev.slice(0, -1));
       return;
     }
 
-    if (key.ctrl && ch === 'c') {
+    if (key.ctrl && ch === "c") {
       process.exit(0);
     }
 
     if (ch && !key.ctrl && !key.meta) {
-      setInput(prev => prev + ch);
+      setInput((prev) => prev + ch);
     }
   });
 
   return (
     <Box flexDirection="column" height={Math.floor((process.stdout.rows ?? 24) * 0.8)}>
       {/* Welcome banner (shown until first message) */}
-      {showWelcome && (
-        <Welcome
-          version="0.1.0"
-          cwd={cwd}
-          recentSessions={recentSessions}
-        />
-      )}
+      {showWelcome && <Welcome version="0.1.0" cwd={cwd} recentSessions={recentSessions} />}
 
       {/* Message list — scrolls within viewport, shrinks when permission prompt shows */}
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
@@ -504,28 +552,26 @@ function App(props: AppProps) {
       </Box>
 
       {/* ─── Footer: always visible, visually distinct ─── */}
-      <Box
-        flexDirection="column"
-        flexShrink={0}
-        borderStyle="round"
-        borderColor="#4a7cc9"
-        paddingX={1}
-        marginTop={1}
-      >
+      <Box flexDirection="column" flexShrink={0} borderStyle="round" borderColor="#4a7cc9" paddingX={1} marginTop={1}>
         {/* Permission prompt */}
-        {pendingPermission && (
-          <PermissionPrompt toolCall={pendingPermission.toolCall} />
-        )}
+        {pendingPermission && <PermissionPrompt toolCall={pendingPermission.toolCall} />}
 
         {/* Spinner or input line */}
         {waiting && !pendingPermission && <Spinner />}
         {!waiting && !pendingPermission && (
           <Box flexDirection="column">
-            {multiLine && <Text color="#5a7a9a" dimColor>  multi-line mode (Ctrl+D to send, Ctrl+E to exit)</Text>}
+            {multiLine && (
+              <Text color="#5a7a9a" dimColor>
+                {" "}
+                multi-line mode (Ctrl+D to send, Ctrl+E to exit)
+              </Text>
+            )}
             <Box>
-              <Text color="#4a7cc9" bold>{multiLine ? '… ' : '› '}</Text>
+              <Text color="#4a7cc9" bold>
+                {multiLine ? "… " : "› "}
+              </Text>
               <Text>{input}</Text>
-              <Text color="gray">{'█'}</Text>
+              <Text color="gray">{"█"}</Text>
             </Box>
           </Box>
         )}

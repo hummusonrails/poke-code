@@ -1,13 +1,13 @@
-import type { ConversationEvent } from '../types.js';
-import type { PokeApiClient } from './client.js';
-import type { ToolExecutor } from '../tools/executor.js';
-import type { ContextBuilder } from '../context/builder.js';
-import type { ChatDbPoller } from '../db/poller.js';
-import type { ImsgWatcher } from '../db/imsg-watcher.js';
-import { parseResponse } from '../parser/response-parser.js';
-import { parseBrackets } from '../parser/bracket-parser.js';
-import { parseIntent } from '../parser/intent-parser.js';
-import { hasIncompleteBlock } from '../parser/incomplete-check.js';
+import type { ContextBuilder } from "../context/builder.js";
+import type { ImsgWatcher } from "../db/imsg-watcher.js";
+import type { ChatDbPoller } from "../db/poller.js";
+import { parseBrackets } from "../parser/bracket-parser.js";
+import { hasIncompleteBlock } from "../parser/incomplete-check.js";
+import { parseIntent } from "../parser/intent-parser.js";
+import { parseResponse } from "../parser/response-parser.js";
+import type { ToolExecutor } from "../tools/executor.js";
+import type { ConversationEvent } from "../types.js";
+import type { PokeApiClient } from "./client.js";
 
 export type PollFn = (onChunk: (text: string) => void) => Promise<string>;
 
@@ -18,25 +18,16 @@ export interface PollOptions {
   onRowIdAdvance?: (rowId: number) => void;
 }
 
-export function createPollFn(
-  poller: ChatDbPoller,
-  lastSeenRowId: number,
-  options: PollOptions = {}
-): PollFn {
-  const {
-    timeoutMs = 180_000,
-    silenceThreshold = 10,
-    pollIntervalMs = 1500,
-  } = options;
+export function createPollFn(poller: ChatDbPoller, lastSeenRowId: number, options: PollOptions = {}): PollFn {
+  const { timeoutMs = 180_000, silenceThreshold = 10, pollIntervalMs = 1500 } = options;
 
   return (onChunk: (text: string) => void): Promise<string> => {
     return new Promise((resolve, reject) => {
       poller.clearCallbacks();
 
       const freshMessages = poller.loadInitialMessages();
-      let capturedRowId = freshMessages.length > 0
-        ? Math.max(...freshMessages.map((m: any) => m.rowId))
-        : lastSeenRowId;
+      let capturedRowId =
+        freshMessages.length > 0 ? Math.max(...freshMessages.map((m: any) => m.rowId)) : lastSeenRowId;
 
       let emptyPolls = 0;
       let gotFirstMessage = false;
@@ -46,9 +37,9 @@ export function createPollFn(
       const timeoutId = setTimeout(() => {
         cleanup();
         if (collectedChunks.length > 0) {
-          resolve(collectedChunks.join('\n'));
+          resolve(collectedChunks.join("\n"));
         } else {
-          reject(new Error('Timed out waiting for response'));
+          reject(new Error("Timed out waiting for response"));
         }
       }, timeoutMs);
 
@@ -71,7 +62,7 @@ export function createPollFn(
           emptyPolls++;
           if (emptyPolls >= silenceThreshold) {
             // Check for incomplete blocks — keep waiting if write/edit is mid-stream
-            const accumulated = collectedChunks.join('\n');
+            const accumulated = collectedChunks.join("\n");
             if (hasIncompleteBlock(accumulated) && extraWaits < 3) {
               extraWaits++;
               emptyPolls = 0; // reset silence counter, keep waiting
@@ -107,10 +98,7 @@ export function createPollFn(
  * Create a PollFn backed by imsg watch (event-driven, ~500ms latency).
  * Falls back gracefully if imsg is not installed.
  */
-export function createImsgPollFn(
-  watcher: ImsgWatcher,
-  options: PollOptions = {}
-): PollFn {
+export function createImsgPollFn(watcher: ImsgWatcher, options: PollOptions = {}): PollFn {
   const {
     timeoutMs = 180_000,
     silenceThreshold = 5, // fewer checks needed — imsg is event-driven
@@ -129,9 +117,9 @@ export function createImsgPollFn(
       const timeoutId = setTimeout(() => {
         cleanup();
         if (collectedChunks.length > 0) {
-          resolve(collectedChunks.join('\n'));
+          resolve(collectedChunks.join("\n"));
         } else {
-          reject(new Error('Timed out waiting for response'));
+          reject(new Error("Timed out waiting for response"));
         }
       }, timeoutMs);
 
@@ -148,7 +136,7 @@ export function createImsgPollFn(
           silenceChecks++;
           if (silenceChecks >= silenceThreshold) {
             // Check for incomplete blocks — keep waiting if write/edit is mid-stream
-            const accumulated = collectedChunks.join('\n');
+            const accumulated = collectedChunks.join("\n");
             if (hasIncompleteBlock(accumulated) && extraWaits < 3) {
               extraWaits++;
               silenceChecks = 0; // reset silence counter, keep waiting
@@ -197,7 +185,7 @@ export interface ConversationOptions {
 
 export async function* conversationLoop(
   userMessage: string,
-  options: ConversationOptions
+  options: ConversationOptions,
 ): AsyncGenerator<ConversationEvent> {
   const {
     apiClient,
@@ -216,7 +204,7 @@ export async function* conversationLoop(
   try {
     await apiClient.sendMessage(fullMessage);
   } catch (err) {
-    yield { type: 'error', message: err instanceof Error ? err.message : String(err) };
+    yield { type: "error", message: err instanceof Error ? err.message : String(err) };
     return;
   }
 
@@ -231,13 +219,13 @@ export async function* conversationLoop(
         chunks.push(chunk);
       });
     } catch (err) {
-      yield { type: 'error', message: err instanceof Error ? err.message : String(err) };
+      yield { type: "error", message: err instanceof Error ? err.message : String(err) };
       return;
     }
 
     // Yield text events for each chunk collected during polling
     for (const chunk of chunks) {
-      yield { type: 'text', content: chunk };
+      yield { type: "text", content: chunk };
     }
 
     // Parse for tool calls: try XML → bracket format → natural language intent
@@ -253,29 +241,29 @@ export async function* conversationLoop(
     }
 
     if (toolCalls.length === 0 || noTools) {
-      yield { type: 'done' };
+      yield { type: "done" };
       return;
     }
 
     // Safety valve
     loopCount++;
     if (loopCount > maxToolLoops) {
-      yield { type: 'error', message: `Too many tool loops (max: ${maxToolLoops})` };
+      yield { type: "error", message: `Too many tool loops (max: ${maxToolLoops})` };
       return;
     }
 
     // Execute tool calls
     for (const toolCall of toolCalls) {
-      yield { type: 'tool_use', toolCall };
+      yield { type: "tool_use", toolCall };
     }
 
     const results = await executor.execute(toolCalls);
     for (const result of results) {
-      yield { type: 'tool_result', result };
+      yield { type: "tool_result", result };
     }
 
     // Send tool results back to Poke — prefer imsg send (direct) over API
-    yield { type: 'sending_results', count: results.length };
+    yield { type: "sending_results", count: results.length };
     const contextReminder = `[Context: User asked: "${userMessage}"]\n\n`;
     const formatted = contextReminder + executor.formatResults(results);
     try {
@@ -285,7 +273,7 @@ export async function* conversationLoop(
         await apiClient.sendMessage(formatted);
       }
     } catch (err) {
-      yield { type: 'error', message: err instanceof Error ? err.message : String(err) };
+      yield { type: "error", message: err instanceof Error ? err.message : String(err) };
       return;
     }
 

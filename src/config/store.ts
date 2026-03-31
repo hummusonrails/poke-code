@@ -1,7 +1,7 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
-import type { PokeConfig } from '../types.js';
-import { DEFAULT_CONFIG } from '../types.js';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { PokeConfig } from "../types.js";
+import { DEFAULT_CONFIG } from "../types.js";
 
 export class ConfigStore {
   private configDir: string;
@@ -9,20 +9,22 @@ export class ConfigStore {
 
   constructor(configDir: string) {
     this.configDir = configDir;
-    this.configPath = join(configDir, 'config.json');
+    this.configPath = join(configDir, "config.json");
   }
 
   load(): PokeConfig {
     if (!existsSync(this.configPath)) return { ...DEFAULT_CONFIG };
     try {
-      const raw = readFileSync(this.configPath, 'utf-8');
+      const raw = readFileSync(this.configPath, "utf-8");
       return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
-    } catch { return { ...DEFAULT_CONFIG }; }
+    } catch {
+      return { ...DEFAULT_CONFIG };
+    }
   }
 
   save(config: PokeConfig): void {
     mkdirSync(this.configDir, { recursive: true });
-    writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8');
+    writeFileSync(this.configPath, JSON.stringify(config, null, 2), "utf-8");
   }
 
   update(partial: Partial<PokeConfig>): void {
@@ -33,5 +35,7 @@ export class ConfigStore {
     return process.env.POKE_API_KEY ?? this.load().apiKey;
   }
 
-  getConfigDir(): string { return this.configDir; }
+  getConfigDir(): string {
+    return this.configDir;
+  }
 }

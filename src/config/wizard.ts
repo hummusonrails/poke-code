@@ -1,5 +1,5 @@
-import { cpSync, existsSync, readdirSync, renameSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { cpSync, existsSync, readdirSync, renameSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 export function copyClaudeConfig(claudeDir: string, pokeDir: string): void {
   if (!existsSync(claudeDir)) return;
@@ -12,7 +12,10 @@ export function renameClaudeToPokeFiles(dir: string): void {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir)) {
     const fullPath = join(dir, entry);
-    if (statSync(fullPath).isDirectory()) { renameClaudeToPokeFiles(fullPath); }
-    else if (entry === 'CLAUDE.md') { renameSync(fullPath, join(dir, 'POKE.md')); }
+    if (statSync(fullPath).isDirectory()) {
+      renameClaudeToPokeFiles(fullPath);
+    } else if (entry === "CLAUDE.md") {
+      renameSync(fullPath, join(dir, "POKE.md"));
+    }
   }
 }

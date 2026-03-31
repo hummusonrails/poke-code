@@ -1,4 +1,4 @@
-import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 
 /**
  * Message received from imsg watch --json
@@ -24,7 +24,7 @@ export class ImsgWatcher {
   private chatId: number;
   private process: ChildProcess | null = null;
   private callbacks: MessageCallback[] = [];
-  private buffer = '';
+  private buffer = "";
   private lastSeenId = 0;
   private alive = false;
 
@@ -39,41 +39,36 @@ export class ImsgWatcher {
   start(sinceRowId?: number): void {
     if (this.process) return;
 
-    const args = [
-      'watch',
-      '--chat-id', String(this.chatId),
-      '--json',
-      '--debounce', '500ms',
-    ];
+    const args = ["watch", "--chat-id", String(this.chatId), "--json", "--debounce", "500ms"];
 
     if (sinceRowId) {
-      args.push('--since-rowid', String(sinceRowId));
+      args.push("--since-rowid", String(sinceRowId));
     }
 
-    this.process = spawn('imsg', args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
+    this.process = spawn("imsg", args, {
+      stdio: ["ignore", "pipe", "pipe"],
     });
 
     this.alive = true;
 
-    this.process.stdout?.on('data', (chunk: Buffer) => {
+    this.process.stdout?.on("data", (chunk: Buffer) => {
       this.buffer += chunk.toString();
       this.processBuffer();
     });
 
-    this.process.stderr?.on('data', (chunk: Buffer) => {
+    this.process.stderr?.on("data", (chunk: Buffer) => {
       const msg = chunk.toString().trim();
       if (msg) {
         process.stderr.write(`[imsg] ${msg}\n`);
       }
     });
 
-    this.process.on('error', (err) => {
+    this.process.on("error", (err) => {
       this.alive = false;
       process.stderr.write(`[imsg] process error: ${err.message}\n`);
     });
 
-    this.process.on('exit', (code) => {
+    this.process.on("exit", (code) => {
       this.alive = false;
       if (code !== 0 && code !== null) {
         process.stderr.write(`[imsg] exited with code ${code}\n`);
@@ -86,9 +81,9 @@ export class ImsgWatcher {
    * Process buffered JSONL output — one JSON object per line.
    */
   private processBuffer(): void {
-    const lines = this.buffer.split('\n');
+    const lines = this.buffer.split("\n");
     // Keep the last (possibly incomplete) line in the buffer
-    this.buffer = lines.pop() ?? '';
+    this.buffer = lines.pop() ?? "";
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -134,7 +129,7 @@ export class ImsgWatcher {
     }
     this.alive = false;
     this.callbacks = [];
-    this.buffer = '';
+    this.buffer = "";
   }
 }
 
@@ -144,9 +139,9 @@ export class ImsgWatcher {
  */
 export function isImsgAvailable(): boolean {
   try {
-    execFileSync('imsg', ['chats', '--limit', '1', '--json'], {
+    execFileSync("imsg", ["chats", "--limit", "1", "--json"], {
       timeout: 5000,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     return true;
   } catch {

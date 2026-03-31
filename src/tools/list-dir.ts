@@ -1,5 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 
 interface ListDirParams {
   path: string;
@@ -13,6 +13,6 @@ export async function listDirTool(params: ListDirParams): Promise<string> {
     const stats = await stat(fullPath);
     results.push(stats.isDirectory() ? `${entry}/` : entry);
   }
-  if (results.length === 0) return '(empty directory)';
-  return results.join('\n');
+  if (results.length === 0) return "(empty directory)";
+  return results.join("\n");
 }

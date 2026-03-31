@@ -1,5 +1,5 @@
-import path from 'path';
-import type { ToolCall } from '../types.js';
+import path from "node:path";
+import type { ToolCall } from "../types.js";
 
 /**
  * Parse Poke's bracket-format tool commands from response text.
@@ -34,15 +34,15 @@ import type { ToolCall } from '../types.js';
  */
 
 const TAG_MAP: Record<string, string> = {
-  read: 'read_file',
-  run: 'bash',
-  list: 'list_dir',
-  find: 'glob',
-  grep: 'grep',
-  search: 'web_search',
-  fetch: 'web_fetch',
-  write: 'write_file',
-  edit: 'edit_file',
+  read: "read_file",
+  run: "bash",
+  list: "list_dir",
+  find: "glob",
+  grep: "grep",
+  search: "web_search",
+  fetch: "web_fetch",
+  write: "write_file",
+  edit: "edit_file",
 };
 
 /** Match [tag] at column 0 (no leading whitespace) optionally followed by content. */
@@ -62,7 +62,7 @@ const EDIT_BLOCK = /^(?!\s)\[edit\]\s+(.+)\n\[old\]\n([\s\S]*?)\[\/old\]\n\[new\
 
 /** Reject targets that look like system prompt examples, not real commands. */
 function isExampleTarget(target: string): boolean {
-  return target.startsWith('path/to/') || target === 'file.ts' || target === 'argument';
+  return target.startsWith("path/to/") || target === "file.ts" || target === "argument";
 }
 
 export function parseBrackets(text: string, cwd: string): ToolCall[] {
@@ -75,7 +75,7 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
     if (isExampleTarget(filePath)) continue;
     const content = match[2];
     const resolved = path.resolve(cwd, filePath);
-    calls.push({ tool: 'write_file', params: { path: resolved, content } });
+    calls.push({ tool: "write_file", params: { path: resolved, content } });
     processedPaths.add(filePath);
   }
 
@@ -87,7 +87,7 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
     const newString = match[3].trimEnd();
     const resolved = path.resolve(cwd, filePath);
     calls.push({
-      tool: 'edit_file',
+      tool: "edit_file",
       params: { path: resolved, old_string: oldString, new_string: newString },
     });
     processedPaths.add(filePath);
@@ -96,7 +96,7 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
   // Third pass: single-line bracket commands
   for (const match of text.matchAll(BRACKET_LINE)) {
     const tag = match[1].toLowerCase();
-    const target = (match[2] ?? '').trim();
+    const target = (match[2] ?? "").trim();
     const tool = TAG_MAP[tag];
 
     if (!tool) continue;
@@ -105,10 +105,10 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
     if (target && isExampleTarget(target)) continue;
 
     // Skip write/edit if already handled by multi-line pass
-    if ((tag === 'write' || tag === 'edit') && processedPaths.has(target)) continue;
+    if ((tag === "write" || tag === "edit") && processedPaths.has(target)) continue;
 
     switch (tool) {
-      case 'read_file': {
+      case "read_file": {
         if (!target) break; // read requires a path
         const rangeMatch = target.match(LINE_RANGE);
         if (rangeMatch) {
@@ -116,7 +116,7 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
           const start = parseInt(rangeMatch[2], 10);
           const end = parseInt(rangeMatch[3], 10);
           calls.push({
-            tool: 'read_file',
+            tool: "read_file",
             params: {
               path: path.resolve(cwd, filePath),
               offset: start,
@@ -125,60 +125,60 @@ export function parseBrackets(text: string, cwd: string): ToolCall[] {
           });
         } else {
           calls.push({
-            tool: 'read_file',
+            tool: "read_file",
             params: { path: path.resolve(cwd, target) },
           });
         }
         break;
       }
 
-      case 'bash':
+      case "bash":
         if (!target) break; // run requires a command
-        calls.push({ tool: 'bash', params: { command: target } });
+        calls.push({ tool: "bash", params: { command: target } });
         break;
 
-      case 'list_dir':
+      case "list_dir":
         // [list] with no path defaults to cwd
         calls.push({
-          tool: 'list_dir',
+          tool: "list_dir",
           params: { path: target ? path.resolve(cwd, target) : cwd },
         });
         break;
 
-      case 'glob':
+      case "glob":
         if (!target) break;
-        calls.push({ tool: 'glob', params: { pattern: target, path: cwd } });
+        calls.push({ tool: "glob", params: { pattern: target, path: cwd } });
         break;
 
-      case 'grep': {
+      case "grep": {
         if (!target) break;
         const grepMatch = target.match(GREP_WITH_GLOB);
         if (grepMatch) {
           calls.push({
-            tool: 'grep',
+            tool: "grep",
             params: { pattern: grepMatch[1].trim(), glob: grepMatch[2], path: cwd },
           });
         } else {
-          calls.push({ tool: 'grep', params: { pattern: target, path: cwd } });
+          calls.push({ tool: "grep", params: { pattern: target, path: cwd } });
         }
         break;
       }
 
-      case 'web_search':
+      case "web_search":
         if (!target) break;
-        calls.push({ tool: 'web_search', params: { query: target } });
+        calls.push({ tool: "web_search", params: { query: target } });
         break;
 
-      case 'web_fetch':
+      case "web_fetch":
         if (!target) break;
-        calls.push({ tool: 'web_fetch', params: { url: target } });
+        calls.push({ tool: "web_fetch", params: { url: target } });
         break;
 
-      case 'write_file':
+      case "write_file":
         // Single-line [write] without content block — skip (no content to write)
         break;
 
-      case 'edit_file':
+      case "edit_file":
         // Single-line [edit] without old/new blocks — skip
         break;
     }

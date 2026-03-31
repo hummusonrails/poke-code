@@ -1,6 +1,6 @@
-export type PermissionMode = 'default' | 'trusted' | 'readonly';
+export type PermissionMode = "default" | "trusted" | "readonly";
 
-export type ToolPermission = 'auto' | 'ask' | 'deny';
+export type ToolPermission = "auto" | "ask" | "deny";
 
 export interface ToolDefinition {
   name: string;
@@ -35,7 +35,7 @@ export interface Message {
 }
 
 export interface SessionEntry {
-  role: 'user' | 'assistant' | 'tool';
+  role: "user" | "assistant" | "tool";
   content?: string;
   toolCalls?: ToolCall[];
   results?: ToolResult[];
@@ -65,9 +65,9 @@ export interface PokeConfig {
 }
 
 export const DEFAULT_CONFIG: PokeConfig = {
-  permissionMode: 'default',
+  permissionMode: "default",
   vimMode: false,
-  theme: 'default',
+  theme: "default",
   pollIntervalNormal: 3000,
   pollIntervalFast: 1500,
   fastPollDuration: 30000,
@@ -79,19 +79,17 @@ export interface HandleInfo {
   chatId: number;
 }
 
-export type OutputFormat = 'text' | 'json' | 'stream-json';
+export type OutputFormat = "text" | "json" | "stream-json";
 
 export type ConversationEvent =
-  | { type: 'text'; content: string }
-  | { type: 'tool_use'; toolCall: ToolCall }
-  | { type: 'tool_result'; result: ToolResult }
-  | { type: 'sending_results'; count: number }
-  | { type: 'error'; message: string }
-  | { type: 'done' };
+  | { type: "text"; content: string }
+  | { type: "tool_use"; toolCall: ToolCall }
+  | { type: "tool_result"; result: ToolResult }
+  | { type: "sending_results"; count: number }
+  | { type: "error"; message: string }
+  | { type: "done" };
 
-export type ToolEvent =
-  | { type: 'progress'; tool: string; message: string }
-  | { type: 'result'; result: ToolResult };
+export type ToolEvent = { type: "progress"; tool: string; message: string } | { type: "result"; result: ToolResult };
 
 export interface CliArgs {
   _: (string | number)[];

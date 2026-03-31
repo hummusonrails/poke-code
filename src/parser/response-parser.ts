@@ -1,4 +1,4 @@
-import type { ParsedResponse, ToolCall } from '../types.js';
+import type { ParsedResponse, ToolCall } from "../types.js";
 
 const TOOL_CALL_REGEX = /<tool_call>([\s\S]*?)<\/tool_call>/g;
 
@@ -24,7 +24,7 @@ export function parseResponse(raw: string): ParsedResponse {
     const jsonStr = match[1].trim();
     try {
       const parsed = JSON.parse(jsonStr);
-      if (parsed.tool && typeof parsed.tool === 'string' && parsed.params) {
+      if (parsed.tool && typeof parsed.tool === "string" && parsed.params) {
         toolCalls.push({ tool: parsed.tool, params: parsed.params });
       } else {
         textSegments.push(match[0]);

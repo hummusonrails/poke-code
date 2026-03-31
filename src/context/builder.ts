@@ -1,8 +1,8 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { ToolRegistry } from '../tools/registry.js';
-import { MemoryReader } from './memory.js';
-import { discoverSkills, findRelevantSkills, formatSkillsContext, type Skill } from './skills.js';
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import type { ToolRegistry } from "../tools/registry.js";
+import { MemoryReader } from "./memory.js";
+import { discoverSkills, findRelevantSkills, formatSkillsContext, type Skill } from "./skills.js";
 
 export class ContextBuilder {
   private registry: ToolRegistry;
@@ -18,7 +18,7 @@ export class ContextBuilder {
   }
 
   listSkills(): string[] {
-    return this.skills.map(s => s.name);
+    return this.skills.map((s) => s.name);
   }
 
   build(userMessage: string, systemPromptOverride?: string): string {
@@ -52,7 +52,7 @@ RULES:
 - CRITICAL: For [write] and [edit], only ONE file per block. Fully close [/write] or [/new] before starting the next file. Never nest write/edit blocks.
 - Send each file completely (open tag, full content, close tag) before moving to the next file
 - Do NOT reference MCP tools or MCP servers — there is no MCP connection
-- The bracket command is all you need — do not wrap in code blocks or quotes${this.skills.length > 0 ? '\n- If you have relevant skills loaded, follow their instructions for specialized tasks.' : ''}`);
+- The bracket command is all you need — do not wrap in code blocks or quotes${this.skills.length > 0 ? "\n- If you have relevant skills loaded, follow their instructions for specialized tasks." : ""}`);
       parts.push(`Working directory: ${this.projectDir}`);
       const dirListing = this.loadDirectoryListing();
       if (dirListing) {
@@ -62,13 +62,22 @@ RULES:
     }
 
     const projectContext = this.loadProjectContext();
-    if (projectContext) { parts.push('\n## Project Context'); parts.push(projectContext); }
+    if (projectContext) {
+      parts.push("\n## Project Context");
+      parts.push(projectContext);
+    }
 
     const memory = this.loadMemory();
-    if (memory) { parts.push('\n## Memory'); parts.push(memory); }
+    if (memory) {
+      parts.push("\n## Memory");
+      parts.push(memory);
+    }
 
     const rules = this.loadRules();
-    if (rules) { parts.push('\n## Project Rules'); parts.push(rules); }
+    if (rules) {
+      parts.push("\n## Project Rules");
+      parts.push(rules);
+    }
 
     // Find and include relevant skills
     const relevant = findRelevantSkills(userMessage, this.skills);
@@ -78,22 +87,22 @@ RULES:
     }
 
     parts.push(`\n---\n${userMessage}`);
-    return parts.join('\n');
+    return parts.join("\n");
   }
 
   private loadProjectContext(): string | null {
-    for (const name of ['POKE.md', 'CLAUDE.md']) {
+    for (const name of ["POKE.md", "CLAUDE.md"]) {
       const p = join(this.projectDir, name);
-      if (existsSync(p)) return readFileSync(p, 'utf-8');
+      if (existsSync(p)) return readFileSync(p, "utf-8");
     }
     return null;
   }
 
   private loadMemory(): string | null {
     const dirs = [
-      join(this.projectDir, '.poke/memory'),
-      join(this.projectDir, '.claude/memory'),
-      join(this.globalConfigDir, 'memory'),
+      join(this.projectDir, ".poke/memory"),
+      join(this.projectDir, ".claude/memory"),
+      join(this.globalConfigDir, "memory"),
     ];
     for (const dir of dirs) {
       const content = new MemoryReader(dir).read();
@@ -106,10 +115,10 @@ RULES:
     try {
       const entries = readdirSync(this.projectDir, { withFileTypes: true });
       const items = entries
-        .filter(e => !e.name.startsWith('.') || e.name === '.env.example')
-        .map(e => e.isDirectory() ? `${e.name}/` : e.name)
+        .filter((e) => !e.name.startsWith(".") || e.name === ".env.example")
+        .map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
         .sort();
-      return items.join(', ');
+      return items.join(", ");
     } catch {
       return null;
     }
@@ -117,15 +126,24 @@ RULES:
 
   private loadRules(): string | null {
     const dirs = [
-      join(this.projectDir, '.poke/rules'),
-      join(this.projectDir, '.claude/rules'),
-      join(this.globalConfigDir, 'rules'),
+      join(this.projectDir, ".poke/rules"),
+      join(this.projectDir, ".claude/rules"),
+      join(this.globalConfigDir, "rules"),
     ];
     for (const dir of dirs) {
       if (!existsSync(dir)) continue;
-      const files = readdirSync(dir).filter(f => f.endsWith('.md'));
+      const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
       if (files.length === 0) continue;
-      return files.map(f => { try { return readFileSync(join(dir, f), 'utf-8'); } catch { return ''; } }).filter(Boolean).join('\n\n');
+      return files
+        .map((f) => {
+          try {
+            return readFileSync(join(dir, f), "utf-8");
+          } catch {
+            return "";
+          }
+        })
+        .filter(Boolean)
+        .join("\n\n");
     }
     return null;
   }

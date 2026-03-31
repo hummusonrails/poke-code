@@ -12,6 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node dist/bin/poke.js",
+    "lint": "biome check src/ bin/ test/",
+    "lint:fix": "biome check --write src/ bin/ test/",
+    "format": "biome format --write src/ bin/ test/",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build"
   },
@@ -38,6 +41,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
     "@types/better-sqlite3": "^7.6.13",
     "@types/diff": "^8.0.0",
     "@types/marked-terminal": "^6.1.1",

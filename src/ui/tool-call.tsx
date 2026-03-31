@@ -1,12 +1,11 @@
-import React from 'react';
-import { Text, Box } from 'ink';
-import type { ToolResult } from '../types.js';
+import { Box, Text } from "ink";
+import type { ToolResult } from "../types.js";
 
 // Poke brand colors
 const POKE = {
-  blue: '#4a7cc9',
-  muted: '#5a7a9a',
-  dim: '#3d5a7a',
+  blue: "#4a7cc9",
+  muted: "#5a7a9a",
+  dim: "#3d5a7a",
 };
 
 interface ToolCallViewProps {
@@ -16,22 +15,20 @@ interface ToolCallViewProps {
 
 /** Compact single-line view for one tool result. */
 export function ToolCallView({ result, verbose }: ToolCallViewProps) {
-  const label = result.params.path ?? result.params.command ?? result.params.pattern ?? '';
+  const label = result.params.path ?? result.params.command ?? result.params.pattern ?? "";
   const isError = !!result.error;
-  const shortLabel = typeof label === 'string' && label.length > 60
-    ? '...' + label.slice(-57)
-    : String(label);
+  const shortLabel = typeof label === "string" && label.length > 60 ? `...${label.slice(-57)}` : String(label);
 
   return (
     <Box flexDirection="column">
       <Box>
-        <Text color={isError ? 'red' : POKE.dim}>{isError ? '✗' : '◆'} </Text>
-        <Text color={isError ? 'red' : POKE.muted}>{result.tool}</Text>
+        <Text color={isError ? "red" : POKE.dim}>{isError ? "✗" : "◆"} </Text>
+        <Text color={isError ? "red" : POKE.muted}>{result.tool}</Text>
         <Text color={POKE.dim}> {shortLabel}</Text>
       </Box>
       {verbose && (
         <Box marginLeft={4}>
-          <Text color="gray">{(result.error ?? result.output ?? '').slice(0, 200)}</Text>
+          <Text color="gray">{(result.error ?? result.output ?? "").slice(0, 200)}</Text>
         </Box>
       )}
     </Box>
@@ -47,36 +44,39 @@ interface ToolSummaryProps {
 export function ToolSummary({ results, verbose }: ToolSummaryProps) {
   if (results.length === 0) return null;
 
-  const errors = results.filter(r => r.error);
+  const errors = results.filter((r) => r.error);
   const counts = new Map<string, number>();
   for (const r of results) {
     counts.set(r.tool, (counts.get(r.tool) ?? 0) + 1);
   }
 
   const summary = Array.from(counts.entries())
-    .map(([tool, count]) => count > 1 ? `${count} ${shortToolName(tool)}` : shortToolName(tool))
-    .join(', ');
+    .map(([tool, count]) => (count > 1 ? `${count} ${shortToolName(tool)}` : shortToolName(tool)))
+    .join(", ");
 
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box>
-        <Text color={POKE.dim}>{'  ◆ '}</Text>
+        <Text color={POKE.dim}>{"  ◆ "}</Text>
         <Text color={POKE.muted}>{summary}</Text>
         {errors.length > 0 && <Text color="red"> ({errors.length} failed)</Text>}
       </Box>
-      {verbose && results.map((r, i) => (
-        <ToolCallView key={`tool-${i}`} result={r} verbose />
-      ))}
+      {verbose && results.map((r, i) => <ToolCallView key={`tool-${i}`} result={r} verbose />)}
     </Box>
   );
 }
 
 function shortToolName(tool: string): string {
   switch (tool) {
-    case 'read_file': return 'read';
-    case 'write_file': return 'write';
-    case 'edit_file': return 'edit';
-    case 'list_dir': return 'list';
-    default: return tool;
+    case "read_file":
+      return "read";
+    case "write_file":
+      return "write";
+    case "edit_file":
+      return "edit";
+    case "list_dir":
+      return "list";
+    default:
+      return tool;
   }
 }

@@ -4,7 +4,7 @@ export async function webSearchTool(params: { query: string; limit?: number }): 
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     },
   });
 
@@ -23,12 +23,12 @@ export async function webSearchTool(params: { query: string; limit?: number }): 
     const snippetMatch = block.match(/<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
 
     if (titleMatch && urlMatch) {
-      const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+      const title = titleMatch[1].replace(/<[^>]*>/g, "").trim();
       let resultUrl = urlMatch[1];
       // DuckDuckGo wraps URLs in a redirect - extract the actual URL
       const uddgMatch = resultUrl.match(/uddg=([^&]*)/);
       if (uddgMatch) resultUrl = decodeURIComponent(uddgMatch[1]);
-      const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]*>/g, '').trim() : '';
+      const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]*>/g, "").trim() : "";
 
       results.push({ title, url: resultUrl, snippet });
     }
@@ -38,7 +38,5 @@ export async function webSearchTool(params: { query: string; limit?: number }): 
     return `No results found for: ${query}`;
   }
 
-  return results
-    .map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`)
-    .join('\n\n');
+  return results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`).join("\n\n");
 }

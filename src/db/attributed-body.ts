@@ -18,7 +18,7 @@ const BINARY_PATTERNS = [
 ];
 
 function containsBinaryArtifacts(text: string): boolean {
-  return BINARY_PATTERNS.some(p => p.test(text));
+  return BINARY_PATTERNS.some((p) => p.test(text));
 }
 
 function cleanExtractedText(text: string): string | null {
@@ -26,7 +26,7 @@ function cleanExtractedText(text: string): string | null {
   // Reject text that's mostly non-printable or contains known binary patterns
   if (containsBinaryArtifacts(text)) return null;
   // Reject if more than 10% of chars are non-printable/replacement chars
-  const nonPrintable = text.replace(/[\x20-\x7e\n\r\t\u00a0-\uffff]/g, '');
+  const nonPrintable = text.replace(/[\x20-\x7e\n\r\t\u00a0-\uffff]/g, "");
   if (nonPrintable.length / text.length > 0.1) return null;
   return text.trim() || null;
 }
@@ -77,7 +77,7 @@ function extractViaTypedStream(data: Buffer): string | null {
       if (length <= 0 || pos + length > bytes.length) continue;
 
       const textData = data.subarray(pos, pos + length);
-      const text = textData.toString('utf8').trim();
+      const text = textData.toString("utf8").trim();
       if (text.length > 0) {
         return text;
       }
@@ -105,19 +105,19 @@ function extractViaChunkScan(data: Buffer): string | null {
     chunks.push(Buffer.from(current));
   }
 
-  let bestString = '';
+  let bestString = "";
 
   for (const chunk of chunks) {
     let str: string;
     try {
-      str = chunk.toString('utf8');
+      str = chunk.toString("utf8");
     } catch {
       continue;
     }
 
-    const printable = str.replace(/[\x00-\x1f\x7f]/g, '');
+    const printable = str.replace(/[\x00-\x1f\x7f]/g, "");
     if (printable.length >= 2 && printable.length > bestString.length) {
-      if (!printable.startsWith('NS') && !printable.startsWith('@"')) {
+      if (!printable.startsWith("NS") && !printable.startsWith('@"')) {
         bestString = printable;
       }
     }

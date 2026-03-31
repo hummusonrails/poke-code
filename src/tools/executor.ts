@@ -1,14 +1,14 @@
-import type { ToolCall, ToolResult, PermissionMode, ToolEvent } from '../types.js';
-import { ToolRegistry } from './registry.js';
-import { readFileTool } from './read-file.js';
-import { writeFileTool } from './write-file.js';
-import { editFileTool } from './edit-file.js';
-import { bashTool } from './bash.js';
-import { globTool } from './glob.js';
-import { grepTool } from './grep.js';
-import { listDirTool } from './list-dir.js';
-import { webSearchTool } from './web-search.js';
-import { webFetchTool } from './web-fetch.js';
+import type { PermissionMode, ToolCall, ToolEvent, ToolResult } from "../types.js";
+import { bashTool } from "./bash.js";
+import { editFileTool } from "./edit-file.js";
+import { globTool } from "./glob.js";
+import { grepTool } from "./grep.js";
+import { listDirTool } from "./list-dir.js";
+import { readFileTool } from "./read-file.js";
+import type { ToolRegistry } from "./registry.js";
+import { webFetchTool } from "./web-fetch.js";
+import { webSearchTool } from "./web-search.js";
+import { writeFileTool } from "./write-file.js";
 
 type PermissionPromptFn = (toolCall: ToolCall) => Promise<boolean>;
 
@@ -28,36 +28,50 @@ export async function* executeTool(
   call: ToolCall,
   registry: ToolRegistry,
   mode: PermissionMode,
-  promptFn: PermissionPromptFn
+  promptFn: PermissionPromptFn,
 ): AsyncGenerator<ToolEvent> {
   const fn = toolFunctions[call.tool];
   if (!fn) {
-    yield { type: 'result', result: { tool: call.tool, params: call.params, output: '', error: `Unknown tool: ${call.tool}` } };
+    yield {
+      type: "result",
+      result: { tool: call.tool, params: call.params, output: "", error: `Unknown tool: ${call.tool}` },
+    };
     return;
   }
 
   const permission = registry.getPermission(call.tool, mode);
-  if (permission === 'deny') {
-    yield { type: 'result', result: { tool: call.tool, params: call.params, output: '', error: `Tool ${call.tool} is denied in ${mode} mode` } };
+  if (permission === "deny") {
+    yield {
+      type: "result",
+      result: {
+        tool: call.tool,
+        params: call.params,
+        output: "",
+        error: `Tool ${call.tool} is denied in ${mode} mode`,
+      },
+    };
     return;
   }
 
-  if (permission === 'ask') {
+  if (permission === "ask") {
     const approved = await promptFn(call);
     if (!approved) {
-      yield { type: 'result', result: { tool: call.tool, params: call.params, output: '', error: `Tool ${call.tool} was denied by user` } };
+      yield {
+        type: "result",
+        result: { tool: call.tool, params: call.params, output: "", error: `Tool ${call.tool} was denied by user` },
+      };
       return;
     }
   }
 
-  yield { type: 'progress', tool: call.tool, message: `Executing ${call.tool}...` };
+  yield { type: "progress", tool: call.tool, message: `Executing ${call.tool}...` };
 
   try {
     const output = await fn(call.params);
-    yield { type: 'result', result: { tool: call.tool, params: call.params, output } };
+    yield { type: "result", result: { tool: call.tool, params: call.params, output } };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    yield { type: 'result', result: { tool: call.tool, params: call.params, output: '', error: message } };
+    yield { type: "result", result: { tool: call.tool, params: call.params, output: "", error: message } };
   }
 }
 
@@ -72,14 +86,16 @@ export class ToolExecutor {
     this.promptFn = promptFn ?? (() => Promise.resolve(false));
   }
 
-  setMode(mode: PermissionMode): void { this.mode = mode; }
+  setMode(mode: PermissionMode): void {
+    this.mode = mode;
+  }
 
   /**
    * Execute tool calls with concurrency limit.
    * Read-only tools run in parallel (up to 5). Write/bash tools run sequentially.
    */
   async execute(toolCalls: ToolCall[], concurrency = 5): Promise<ToolResult[]> {
-    const READ_TOOLS = new Set(['read_file', 'list_dir', 'glob', 'grep', 'web_search', 'web_fetch']);
+    const READ_TOOLS = new Set(["read_file", "list_dir", "glob", "grep", "web_search", "web_fetch"]);
 
     // Separate read-only (parallelizable) from write (sequential)
     const readCalls: ToolCall[] = [];
@@ -103,7 +119,7 @@ export class ToolExecutor {
     // Execute write tools sequentially (order matters, need permission prompts)
     for (const call of writeCalls) {
       for await (const event of executeTool(call, this.registry, this.mode, this.promptFn)) {
-        if (event.type === 'result') {
+        if (event.type === "result") {
           results.push(event.result);
         }
       }
@@ -119,7 +135,9 @@ export class ToolExecutor {
 
     const waitForSlot = (): Promise<void> => {
       if (active < concurrency) return Promise.resolve();
-      return new Promise(resolve => { resolveSlot = resolve; });
+      return new Promise((resolve) => {
+        resolveSlot = resolve;
+      });
     };
 
     const tasks = calls.map(async (call) => {
@@ -127,7 +145,7 @@ export class ToolExecutor {
       active++;
       try {
         for await (const event of executeTool(call, this.registry, this.mode, this.promptFn)) {
-          if (event.type === 'result') {
+          if (event.type === "result") {
             results.push(event.result);
           }
         }
@@ -147,14 +165,14 @@ export class ToolExecutor {
 
   formatResults(results: ToolResult[], maxPerResult = 8000): string {
     const sections = results.map((r) => {
-      const label = r.params.path ?? r.params.command ?? r.params.pattern ?? '';
+      const label = r.params.path ?? r.params.command ?? r.params.pattern ?? "";
       const header = `[${r.tool}] ${label}`;
       let body = r.error ? `Error: ${r.error}` : r.output;
       if (body.length > maxPerResult) {
-        body = body.slice(0, maxPerResult) + '\n... (truncated)';
+        body = `${body.slice(0, maxPerResult)}\n... (truncated)`;
       }
       return `${header}\n<result>\n${body}\n</result>`;
     });
-    return `Tool results:\n\n${sections.join('\n\n')}`;
+    return `Tool results:\n\n${sections.join("\n\n")}`;
   }
 }

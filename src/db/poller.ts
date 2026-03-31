@@ -1,11 +1,11 @@
-import Database from 'better-sqlite3';
-import { homedir } from 'os';
-import { join } from 'path';
-import type { Message, HandleInfo } from '../types.js';
-import { extractTextFromAttributedBody } from './attributed-body.js';
+import { homedir } from "node:os";
+import { join } from "node:path";
+import Database from "better-sqlite3";
+import type { HandleInfo, Message } from "../types.js";
+import { extractTextFromAttributedBody } from "./attributed-body.js";
 
 const APPLE_EPOCH_OFFSET = 978307200; // seconds between Unix epoch and Apple epoch (2001-01-01)
-const OBJECT_REPLACEMENT_CHAR = '\uFFFC';
+const OBJECT_REPLACEMENT_CHAR = "\uFFFC";
 
 const TAPBACK_MIN = 2000;
 const TAPBACK_MAX = 5005;
@@ -73,7 +73,7 @@ function parseRow(row: RawMessageRow): Message | null {
 
   // Remove object replacement characters
   if (text) {
-    text = text.replace(new RegExp(OBJECT_REPLACEMENT_CHAR, 'g'), '').trim();
+    text = text.replace(new RegExp(OBJECT_REPLACEMENT_CHAR, "g"), "").trim();
   }
 
   // If text column is empty or only had replacement chars, try attributedBody
@@ -97,7 +97,6 @@ function parseRow(row: RawMessageRow): Message | null {
 
 export class ChatDbPoller {
   private db: Database.Database;
-  private handleId: number | null = null;
   private chatId: number | null = null;
   private lastSeenRowId: number = 0;
   private callbacks: Array<(messages: Message[]) => void> = [];
@@ -111,8 +110,8 @@ export class ChatDbPoller {
   private readonly fastDuration: number;
 
   constructor(
-    dbPath: string = join(homedir(), 'Library', 'Messages', 'chat.db'),
-    options: { normalInterval?: number; fastInterval?: number; fastDuration?: number } = {}
+    dbPath: string = join(homedir(), "Library", "Messages", "chat.db"),
+    options: { normalInterval?: number; fastInterval?: number; fastDuration?: number } = {},
   ) {
     this.normalInterval = options.normalInterval ?? 3000;
     this.fastInterval = options.fastInterval ?? 1500;
@@ -121,7 +120,7 @@ export class ChatDbPoller {
 
     this.db = new Database(dbPath, { readonly: true });
     // Enable WAL mode visibility for readonly connections
-    this.db.pragma('journal_mode = WAL');
+    this.db.pragma("journal_mode = WAL");
   }
 
   fetchRecentHandles(): HandleInfo[] {
@@ -141,7 +140,7 @@ export class ChatDbPoller {
 
   loadInitialMessages(): Message[] {
     if (this.chatId === null) {
-      throw new Error('No chat selected. Call setHandle() first.');
+      throw new Error("No chat selected. Call setHandle() first.");
     }
 
     const stmt = this.db.prepare<[number], RawMessageRow>(INITIAL_MESSAGES_QUERY);

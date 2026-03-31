@@ -1,5 +1,4 @@
-import React from 'react';
-import { Text, Box } from 'ink';
+import { Box, Text } from "ink";
 
 interface StatusLineProps {
   sessionId: string;
@@ -13,7 +12,7 @@ interface StatusLineProps {
 export function StatusLine({ sessionId, messageCount, elapsed, cwd, permissionMode, multiLine }: StatusLineProps) {
   return (
     <Box justifyContent="space-between" width="100%">
-      <Text color="gray">{multiLine ? 'Ctrl+D send | Ctrl+E exit multi' : '? for shortcuts | Ctrl+E multi-line'}</Text>
+      <Text color="gray">{multiLine ? "Ctrl+D send | Ctrl+E exit multi" : "? for shortcuts | Ctrl+E multi-line"}</Text>
       <Text color="gray">mode:{permissionMode}</Text>
     </Box>
   );

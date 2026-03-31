@@ -1,7 +1,7 @@
-import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
-import { highlight } from 'cli-highlight';
-import { Chalk } from 'chalk';
+import { readFile } from "node:fs/promises";
+import { extname } from "node:path";
+import { Chalk } from "chalk";
+import { highlight } from "cli-highlight";
 
 interface ReadFileParams {
   path: string;
@@ -11,35 +11,35 @@ interface ReadFileParams {
 
 // extension to language map for syntax highlighting
 const EXT_TO_LANG: Record<string, string> = {
-  '.ts': 'typescript',
-  '.tsx': 'typescript',
-  '.js': 'javascript',
-  '.jsx': 'javascript',
-  '.json': 'json',
-  '.md': 'markdown',
-  '.py': 'python',
-  '.sh': 'bash',
-  '.bash': 'bash',
-  '.zsh': 'bash',
-  '.css': 'css',
-  '.scss': 'scss',
-  '.html': 'html',
-  '.htm': 'html',
-  '.yaml': 'yaml',
-  '.yml': 'yaml',
-  '.toml': 'ini',
-  '.xml': 'xml',
-  '.sql': 'sql',
-  '.rs': 'rust',
-  '.go': 'go',
-  '.rb': 'ruby',
-  '.swift': 'swift',
-  '.kt': 'kotlin',
-  '.java': 'java',
-  '.c': 'c',
-  '.cpp': 'cpp',
-  '.h': 'c',
-  '.hpp': 'cpp',
+  ".ts": "typescript",
+  ".tsx": "typescript",
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".json": "json",
+  ".md": "markdown",
+  ".py": "python",
+  ".sh": "bash",
+  ".bash": "bash",
+  ".zsh": "bash",
+  ".css": "css",
+  ".scss": "scss",
+  ".html": "html",
+  ".htm": "html",
+  ".yaml": "yaml",
+  ".yml": "yaml",
+  ".toml": "ini",
+  ".xml": "xml",
+  ".sql": "sql",
+  ".rs": "rust",
+  ".go": "go",
+  ".rb": "ruby",
+  ".swift": "swift",
+  ".kt": "kotlin",
+  ".java": "java",
+  ".c": "c",
+  ".cpp": "cpp",
+  ".h": "c",
+  ".hpp": "cpp",
 };
 
 // force colors on so highlighting works outside tty
@@ -80,14 +80,14 @@ function highlightCode(content: string, filePath: string): string {
 }
 
 export async function readFileTool(params: ReadFileParams): Promise<string> {
-  const content = await readFile(params.path, 'utf-8');
-  const lines = content.split('\n');
+  const content = await readFile(params.path, "utf-8");
+  const lines = content.split("\n");
   const start = (params.offset ?? 1) - 1;
   const end = params.limit ? start + params.limit : lines.length;
   const selectedLines = lines.slice(start, end);
 
-  const highlighted = highlightCode(selectedLines.join('\n'), params.path);
-  const highlightedLines = highlighted.split('\n');
+  const highlighted = highlightCode(selectedLines.join("\n"), params.path);
+  const highlightedLines = highlighted.split("\n");
 
-  return highlightedLines.map((line, i) => `${start + i + 1}\t${line}`).join('\n');
+  return highlightedLines.map((line, i) => `${start + i + 1}\t${line}`).join("\n");
 }
