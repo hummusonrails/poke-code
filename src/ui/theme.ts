@@ -100,7 +100,7 @@ export function getTheme(name: ThemeName | string): Theme {
 
 export function resolveThemeColor(colorOrKey: string, theme: Theme): string {
   if (colorOrKey.startsWith('#') || colorOrKey.startsWith('rgb')) return colorOrKey;
-  return (theme as Record<string, string>)[colorOrKey] ?? colorOrKey;
+  return (theme as unknown as Record<string, string>)[colorOrKey] ?? colorOrKey;
 }
 
 export function listThemes(): string[] {

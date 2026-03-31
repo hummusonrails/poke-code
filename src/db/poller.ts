@@ -97,6 +97,7 @@ function parseRow(row: RawMessageRow): Message | null {
 
 export class ChatDbPoller {
   private db: Database.Database;
+  private handleId: number | null = null;
   private chatId: number | null = null;
   private lastSeenRowId: number = 0;
   private callbacks: Array<(messages: Message[]) => void> = [];
