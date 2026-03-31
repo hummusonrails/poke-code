@@ -75,7 +75,7 @@ function App(props: AppProps) {
   const [input, setInput] = useState("");
   const [multiLine, setMultiLine] = useState(false);
   const [waiting, setWaiting] = useState(false);
-  const [_toolResults, setToolResults] = useState<ToolResult[]>([]);
+  const [toolResults, setToolResults] = useState<ToolResult[]>([]);
   const [permissionMode, setPermissionMode] = useState<PermissionMode>(initialPermissionMode);
   const [verboseMode, setVerboseMode] = useState(verbose ?? false);
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
@@ -610,6 +610,7 @@ function App(props: AppProps) {
           cwd={cwd}
           permissionMode={permissionMode}
           multiLine={multiLine}
+          toolCount={toolResults.length}
         />
       </Box>
     </Box>
