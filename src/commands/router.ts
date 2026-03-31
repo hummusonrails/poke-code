@@ -16,6 +16,8 @@ export interface CommandContext {
   getMemoryContent: (name: string) => string;
   runDiagnostics: () => Promise<string>;
   copyLastMessage: () => string;
+  getReducedMotion: () => boolean;
+  setReducedMotion: (on: boolean) => void;
 }
 
 export interface CommandResult {
@@ -134,6 +136,12 @@ registerCommand("bug", "Report a bug or issue", () => ({
 registerCommand("copy", "Copy last assistant message to clipboard", (ctx) => {
   const result = ctx.copyLastMessage();
   return { output: result, handled: true };
+});
+
+registerCommand('reduce-motion', 'Toggle reduced motion (disable animations)', (ctx) => {
+  const current = ctx.getReducedMotion();
+  ctx.setReducedMotion(!current);
+  return { output: `Reduced motion ${!current ? 'on' : 'off'} — animations ${!current ? 'disabled' : 'enabled'}.`, handled: true };
 });
 
 registerCommand("quit", "Exit the CLI", (ctx) => {

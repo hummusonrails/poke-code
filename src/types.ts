@@ -62,6 +62,7 @@ export interface PokeConfig {
   pollIntervalNormal: number;
   pollIntervalFast: number;
   fastPollDuration: number;
+  reducedMotion: boolean;
 }
 
 export const DEFAULT_CONFIG: PokeConfig = {
@@ -71,6 +72,7 @@ export const DEFAULT_CONFIG: PokeConfig = {
   pollIntervalNormal: 3000,
   pollIntervalFast: 1500,
   fastPollDuration: 30000,
+  reducedMotion: false,
 };
 
 export interface HandleInfo {

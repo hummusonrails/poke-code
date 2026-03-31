@@ -84,6 +84,7 @@ function App(props: AppProps) {
   const [sessionId, setSessionId] = useState("");
   const [messageCount, setMessageCount] = useState(0);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const [recentSessions, setRecentSessions] = useState<{ id: string; lastActiveAt: string; cwd: string }[]>([]);
   const termSize = useTerminalSize();
   const startTime = useRef(new Date());
@@ -320,6 +321,8 @@ function App(props: AppProps) {
               return "Failed to copy to clipboard.";
             }
           },
+          getReducedMotion: () => reducedMotion,
+          setReducedMotion: (on: boolean) => setReducedMotion(on),
         };
 
         const result = await routeCommand(trimmed, ctx);
@@ -489,6 +492,7 @@ function App(props: AppProps) {
       messages,
       permissionMode,
       verboseMode,
+      reducedMotion,
       chatId,
       handleId,
       sessionId,
@@ -594,7 +598,7 @@ function App(props: AppProps) {
         {pendingPermission && <PermissionPrompt toolCall={pendingPermission.toolCall} />}
 
         {/* Spinner or input line */}
-        {waiting && !pendingPermission && <Spinner />}
+        {waiting && !pendingPermission && <Spinner reducedMotion={reducedMotion} />}
         {!waiting && !pendingPermission && (
           <Box flexDirection="column">
             {multiLine && (

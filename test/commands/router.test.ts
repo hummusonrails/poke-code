@@ -97,9 +97,9 @@ describe("routeCommand", () => {
 });
 
 describe("getCommandList", () => {
-  it("returns all 16 registered commands", () => {
+  it("returns all 17 registered commands", () => {
     const list = getCommandList();
-    expect(list).toHaveLength(16);
+    expect(list).toHaveLength(17);
     const names = list.map((c) => c.name);
     expect(names).toContain("help");
     expect(names).toContain("clear");
@@ -117,6 +117,7 @@ describe("getCommandList", () => {
     expect(names).toContain("doctor");
     expect(names).toContain("bug");
     expect(names).toContain("copy");
+    expect(names).toContain("reduce-motion");
   });
 
   it("each command has a name and description", () => {
