@@ -1,3 +1,5 @@
+import type { StoredCompanion } from "./companion/types.js";
+
 export type PermissionMode = "default" | "trusted" | "readonly";
 
 export type ToolPermission = "auto" | "ask" | "deny";
@@ -64,6 +66,8 @@ export interface PokeConfig {
   fastPollDuration: number;
   reducedMotion: boolean;
   autoDream: AutoDreamConfig;
+  userId?: string;
+  companion?: StoredCompanion;
 }
 
 export const DEFAULT_CONFIG: PokeConfig = {

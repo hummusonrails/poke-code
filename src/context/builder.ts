@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { ToolRegistry } from "../tools/registry.js";
 import { MemoryReader } from "./memory.js";
 import { discoverSkills, findRelevantSkills, formatSkillsContext, type Skill } from "./skills.js";
+import { getCompanionPromptContext } from "../companion/prompt.js";
 
 export class ContextBuilder {
   private registry: ToolRegistry;
@@ -84,6 +85,12 @@ RULES:
     const skillsContext = formatSkillsContext(relevant);
     if (skillsContext) {
       parts.push(`\n${skillsContext}`);
+    }
+
+    // Inject companion context if a companion exists and isn't muted
+    const companionContext = getCompanionPromptContext();
+    if (companionContext) {
+      parts.push(`\n${companionContext}`);
     }
 
     parts.push(`\n---\n${userMessage}`);

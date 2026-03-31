@@ -32,6 +32,12 @@ import { StatusLine } from "./ui/status-line.js";
 import { matchCommands } from "./ui/typeahead.js";
 import { computeAppHeight, useTerminalSize } from "./ui/use-terminal-size.js";
 import { Welcome } from "./ui/welcome.js";
+import { CompanionSprite, companionReservedColumns } from "./companion/CompanionSprite.js";
+import { getCompanion, hatchCompanion, updateCompanionXP, setCompanionMuted, renameCompanion } from "./companion/companion.js";
+import { extractEmotes } from "./companion/emote-parser.js";
+import { companionEvents } from "./companion/local-events.js";
+import { getNextMilestone } from "./companion/xp.js";
+import type { AnimationState } from "./companion/types.js";
 
 export interface AppProps {
   apiKey: string;
@@ -93,6 +99,7 @@ function App(props: AppProps) {
   const [showWelcome, setShowWelcome] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [recentSessions, setRecentSessions] = useState<{ id: string; lastActiveAt: string; cwd: string }[]>([]);
+  const [companionReaction, setCompanionReaction] = useState<{ speech?: string; animation: AnimationState } | undefined>(undefined);
   const termSize = useTerminalSize();
   const startTime = useRef(new Date());
   const [elapsed, setElapsed] = useState("0s");
@@ -129,6 +136,23 @@ function App(props: AppProps) {
     const t = setInterval(() => setElapsed(formatElapsed(startTime.current)), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Subscribe to companion local events → update reaction state
+  useEffect(() => {
+    const unsubscribe = companionEvents.on((animation, duration) => {
+      setCompanionReaction({ animation });
+      if (duration) {
+        setTimeout(() => setCompanionReaction(undefined), duration);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Emit session_start and grant XP on mount
+  useEffect(() => {
+    companionEvents.emit("session_start");
+    updateCompanionXP(5); // session_start XP
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize session + load recent sessions for welcome
   useEffect(() => {
@@ -483,6 +507,59 @@ function App(props: AppProps) {
           cronUninstall: () => {
             return uninstallLaunchd();
           },
+          getCompanionCard: () => {
+            const companion = getCompanion();
+            if (!companion) {
+              return "No companion yet! Hatch one with: /companion hatch <name>";
+            }
+            const milestone = getNextMilestone(companion.xp);
+            const milestoneStr = milestone
+              ? `Next: ${milestone.name} (${milestone.type}, ${milestone.xpNeeded} XP away)`
+              : "All milestones unlocked!";
+            const accessories = companion.accessories.length > 0
+              ? companion.accessories.join(", ")
+              : "none yet";
+            return [
+              `Companion: ${companion.name}`,
+              `  Species: ${companion.species}`,
+              `  Stage:   ${companion.stage}`,
+              `  XP:      ${companion.xp}`,
+              `  ${milestoneStr}`,
+              `  Accessories: ${accessories}`,
+              `  Muted:   ${companion.muted ? "yes" : "no"}`,
+            ].join("\n");
+          },
+          petCompanion: () => {
+            const companion = getCompanion();
+            if (!companion) return "No companion to pet! Hatch one with: /companion hatch <name>";
+            companionEvents.emit("tool_success");
+            return `You pet ${companion.name}. It wiggles happily!`;
+          },
+          muteCompanion: () => {
+            const companion = getCompanion();
+            if (!companion) return "No companion yet.";
+            setCompanionMuted(true);
+            return `${companion.name} is now muted. It won't appear in responses.`;
+          },
+          unmuteCompanion: () => {
+            const companion = getCompanion();
+            if (!companion) return "No companion yet.";
+            setCompanionMuted(false);
+            return `${companion.name} is now unmuted!`;
+          },
+          renameCompanion: (name: string) => {
+            const companion = getCompanion();
+            if (!companion) return "No companion yet.";
+            const oldName = companion.name;
+            renameCompanion(name);
+            return `Renamed ${oldName} to ${name}.`;
+          },
+          hatchCompanion: (name: string) => {
+            const existing = getCompanion();
+            if (existing) return `You already have a companion: ${existing.name}. Use /companion to view it.`;
+            const companion = hatchCompanion(name, "curious and adaptable");
+            return `A wild ${companion.species} appeared! Meet ${companion.name} (${companion.eye} eyes). Stage: ${companion.stage}`;
+          },
           runDream: async () => {
             const dream = new AutoDream({
               sessionsDir: join(configDir, "sessions"),
@@ -520,6 +597,7 @@ function App(props: AppProps) {
       }
 
       appendMessage({ role: "user", content: trimmed });
+      updateCompanionXP(1); // message_sent XP
       if (sessionId) {
         sessionManager.current.append(sessionId, {
           role: "user",
@@ -570,8 +648,16 @@ function App(props: AppProps) {
         for await (const event of events) {
           switch (event.type) {
             case "text": {
+              // Extract emotes before stripping bracket commands
+              const { cleanText: emoteClean, emotes } = extractEmotes(event.content);
+              if (emotes.length > 0) {
+                const first = emotes[0];
+                setCompanionReaction({ speech: first.speech, animation: first.animation });
+                setTimeout(() => setCompanionReaction(undefined), 8000);
+              }
+
               // Strip bracket commands from displayed text
-              const clean = stripCommands(event.content);
+              const clean = stripCommands(emoteClean);
               if (clean) {
                 appendMessage({ role: "assistant", content: clean });
               }
@@ -593,6 +679,8 @@ function App(props: AppProps) {
             case "tool_result":
               pendingToolResults.push(event.result);
               setToolResults((prev) => [...prev, event.result]);
+              updateCompanionXP(2); // tool_executed XP
+              companionEvents.emit(event.result.error ? "tool_failure" : "tool_success");
               if (verboseMode) {
                 const label = event.result.params.path ?? event.result.params.command ?? "";
                 const preview = event.result.error ? `Error: ${event.result.error}` : event.result.output.slice(0, 200);
@@ -786,35 +874,52 @@ function App(props: AppProps) {
         {/* Permission prompt */}
         {pendingPermission && <PermissionPrompt toolCall={pendingPermission.toolCall} />}
 
-        {/* Spinner or input line */}
-        {waiting && !pendingPermission && <Spinner reducedMotion={reducedMotion} />}
-        {!waiting && !pendingPermission && (
-          <Box flexDirection="column">
-            {multiLine && (
-              <Text color="#5a7a9a" dimColor>
-                {" "}
-                multi-line mode (Ctrl+D to send, Ctrl+E to exit)
-              </Text>
-            )}
-            <Box>
-              <Text color="#4a7cc9" bold>
-                {multiLine ? "… " : "› "}
-              </Text>
-              <Text>{input}</Text>
-              <Text color="gray">{"█"}</Text>
-            </Box>
-            {input.startsWith("/") && input.length > 0 && !input.includes(" ") && (
-              <Box marginLeft={2}>
-                <Text color="gray" dimColor>
-                  {matchCommands(input, getCommandList())
-                    .slice(0, 5)
-                    .map((c) => `/${c.name}`)
-                    .join("  ")}
-                </Text>
+        {/* Spinner or input line, with companion sprite beside it */}
+        <Box flexDirection="row">
+          <Box flexDirection="column" flexGrow={1}>
+            {waiting && !pendingPermission && <Spinner reducedMotion={reducedMotion} />}
+            {!waiting && !pendingPermission && (
+              <Box flexDirection="column">
+                {multiLine && (
+                  <Text color="#5a7a9a" dimColor>
+                    {" "}
+                    multi-line mode (Ctrl+D to send, Ctrl+E to exit)
+                  </Text>
+                )}
+                <Box>
+                  <Text color="#4a7cc9" bold>
+                    {multiLine ? "… " : "› "}
+                  </Text>
+                  <Text>{input}</Text>
+                  <Text color="gray">{"█"}</Text>
+                </Box>
+                {input.startsWith("/") && input.length > 0 && !input.includes(" ") && (
+                  <Box marginLeft={2}>
+                    <Text color="gray" dimColor>
+                      {matchCommands(input, getCommandList())
+                        .slice(0, 5)
+                        .map((c) => `/${c.name}`)
+                        .join("  ")}
+                    </Text>
+                  </Box>
+                )}
               </Box>
             )}
           </Box>
-        )}
+          {(() => {
+            const companion = getCompanion();
+            if (companion && !companion.muted) {
+              return (
+                <CompanionSprite
+                  companion={companion}
+                  reaction={companionReaction}
+                  terminalWidth={termSize.columns}
+                />
+              );
+            }
+            return null;
+          })()}
+        </Box>
 
         {/* Status line */}
         <StatusLine

@@ -25,6 +25,12 @@ export interface CommandContext {
   cronInstall: () => string;
   cronUninstall: () => string;
   runDream: () => Promise<string>;
+  getCompanionCard: () => string;
+  petCompanion: () => string;
+  muteCompanion: () => string;
+  unmuteCompanion: () => string;
+  renameCompanion: (name: string) => string;
+  hatchCompanion: (name: string) => string;
 }
 
 export interface CommandResult {
@@ -217,6 +223,33 @@ registerCommand("cron", "Manage scheduled prompts", async (ctx, args) => {
 registerCommand("dream", "Consolidate session memories", async (ctx) => {
   const result = await ctx.runDream();
   return { output: result, handled: true };
+});
+
+registerCommand("companion", "View or interact with your companion", (ctx, args) => {
+  const parts = args.split(/\s+/);
+  const sub = parts[0] || "";
+  const rest = parts.slice(1).join(" ").trim();
+
+  switch (sub) {
+    case "pet":
+      return { output: ctx.petCompanion(), handled: true };
+    case "mute":
+      return { output: ctx.muteCompanion(), handled: true };
+    case "unmute":
+      return { output: ctx.unmuteCompanion(), handled: true };
+    case "name": {
+      if (!rest) return { output: "Usage: /companion name <new-name>", handled: true };
+      return { output: ctx.renameCompanion(rest), handled: true };
+    }
+    case "hatch": {
+      if (!rest) return { output: "Usage: /companion hatch <name>", handled: true };
+      return { output: ctx.hatchCompanion(rest), handled: true };
+    }
+    default: {
+      const card = ctx.getCompanionCard();
+      return { output: card, handled: true };
+    }
+  }
 });
 
 registerCommand("quit", "Exit the CLI", (ctx) => {

@@ -28,6 +28,16 @@
 ## What's New
 
 > [!TIP]
+> **Companions** — Your terminal has a new resident. Hatch a persistent island-tech creature that lives beside your input, evolves with usage, and reacts to your coding sessions. `/companion hatch Sparky` to get started.
+>
+> ```
+>     ¥/=~\
+>    (◉=◉)  ── "nice refactor!"
+>   =/|≡|\=
+>   (_/ \_)
+>    Sparky
+> ```
+>
 > **Cron Scheduling** — Schedule prompts to run on a timer with natural language (`/cron every 30 minutes check build status`) or standard cron expressions. Runs in-session or as a background daemon with optional macOS launchd integration for auto-start on boot.
 >
 > **AutoDream** — Automatic memory consolidation. After enough sessions, poke-code summarizes your recent conversations into long-term memory files so it gets smarter over time — no manual effort required. Trigger manually anytime with `/dream`.
@@ -43,6 +53,7 @@
 - **Schedule prompts with cron** - run prompts on a recurring or one-shot basis using natural language or cron expressions, with a background daemon and launchd support
 - **Auto-consolidate memory** - after enough sessions, automatically summarize recent conversations into long-term memory files that enrich future context
 - **Persist sessions** - JSONL-based session history with resume, context compaction, and session browsing
+- **Hatch a companion** - a persistent island-tech creature that evolves with your usage, reacts to your coding via `[emote]` tags, and unlocks accessories over time
 - **Guard against partial writes** - detects when iMessage splits a file write across multiple bubbles and refuses to overwrite with incomplete content
 - **Render markdown** - assistant messages render with full terminal markdown (bold, code blocks, lists) via `marked-terminal`
 
@@ -170,6 +181,35 @@ Configure thresholds in `~/.poke/config.json`:
 }
 ```
 
+### Companions
+
+Every poke-code user gets a unique island-tech companion — a hybrid creature that's part tropical, part circuitry. Your companion is deterministically generated from your identity, so it's uniquely yours.
+
+```
+   /~\          ¥/=~\         ¥¥/≡=~\
+  (·_·)   →    (◉=◉)~   →   (✦≡=✦)~≈
+  _/| |\_      =/|≡|\=      *=/|≡≡|\=*
+ (_/ \_)       (_/ \_)       (≈/ \≈)
+  Spark        Powered       Overclocked
+```
+
+**10 species** — Clicklaw, Synthray, Drifter, Shellbyte, Flickbug, Reefnode, Zapgecko, Coilpod, Wattpalm, Neoncoil
+
+**3 evolution stages** — Companions earn XP from your activity (sessions, messages, tool use, cron jobs, `/dream`) and evolve from Spark → Powered → Overclocked, gaining visual detail at each stage.
+
+**Accessory unlocks** — Between stages, companions unlock cosmetics: Signal Spark, Coral Crown, Tide Trail, Solar Shell, Copper Coil, Biolume Glow, and Storm Aura.
+
+**AI-powered reactions** — Poke can include `[emote]` tags in responses, giving your companion contextual speech bubbles and animations. Local events (tool success, failures, idle) also trigger reactions without any API call.
+
+```bash
+/companion              # show your companion's card
+/companion hatch Sparky # hatch a new companion
+/companion pet          # give it a pat
+/companion mute         # hide companion
+/companion unmute       # bring it back
+/companion name Ziggy   # rename
+```
+
 ### Tools
 
 All tools execute locally in your terminal. Results are sent back to Poke for context.
@@ -207,6 +247,7 @@ Read-only tools run in parallel (up to 5 concurrent). Write and bash tools run s
 | `/doctor` | Run setup diagnostics |
 | `/bug` | Report a bug or issue |
 | `/copy` | Copy last response to clipboard |
+| `/companion` | Manage your island-tech companion (hatch, pet, mute, unmute, name) |
 | `/cron` | Manage scheduled prompts (add, once, list, remove, results, install, uninstall) |
 | `/dream` | Manually trigger memory consolidation |
 | `/quit` | Exit |
@@ -340,6 +381,16 @@ poke-code/
 │   │   └── autodream.ts      # memory consolidation engine
 │   ├── entrypoints/
 │   │   └── daemon.ts         # headless daemon bootstrap
+│   ├── companion/
+│   │   ├── types.ts           # species, stages, accessories, xp types
+│   │   ├── roll.ts            # deterministic prng from user identity
+│   │   ├── xp.ts              # xp tracking and milestone computation
+│   │   ├── sprites.ts         # ascii art: 10 species × 3 stages × 3 frames
+│   │   ├── companion.ts       # core api: get, hatch, evolve, rename
+│   │   ├── prompt.ts          # system prompt companion context injection
+│   │   ├── emote-parser.ts    # [emote] tag extraction from responses
+│   │   ├── local-events.ts    # event emitter for tool/session reactions
+│   │   └── CompanionSprite.tsx # animated terminal sprite component
 │   ├── commands/
 │   │   └── router.ts         # slash commands with diagnostics
 │   ├── ui/

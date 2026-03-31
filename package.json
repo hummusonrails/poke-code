@@ -1,6 +1,6 @@
 {
   "name": "poke-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Claude Code-style terminal CLI for Poke AI",
   "type": "module",
   "bin": {

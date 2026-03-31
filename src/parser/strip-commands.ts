@@ -22,6 +22,9 @@ const EDIT_BLOCK = /\[edit\]\s+.+\n\[old\]\n[\s\S]*?\[\/old\]\n\[new\]\n[\s\S]*?
 /** XML tool calls: <tool_call>...</tool_call> */
 const XML_TOOL_CALL = /<tool_call>[\s\S]*?<\/tool_call>/g;
 
+/** Emote blocks: [emote]...[/emote] (companion reactions, not for display) */
+const EMOTE_BLOCK = /\[emote\][\s\S]*?\[\/emote\]/gm;
+
 /** Fenced code blocks — Poke often sends raw code as part of edit attempts */
 const CODE_BLOCK = /```\w*\n[\s\S]*?```/gm;
 
@@ -45,6 +48,7 @@ export function stripCommands(text: string): string {
     // Strip complete multi-line blocks first
     .replace(WRITE_BLOCK, "")
     .replace(EDIT_BLOCK, "")
+    .replace(EMOTE_BLOCK, "")
     .replace(XML_TOOL_CALL, "")
     .replace(CODE_BLOCK, "")
     // Strip individual markup lines (fragmented across bubbles)
