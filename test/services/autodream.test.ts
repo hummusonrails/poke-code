@@ -1,12 +1,12 @@
-import { mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AutoDream } from "../../src/services/autodream.js";
 
 const FIXTURES_DIR = join(import.meta.dirname, "__fixtures__", "autodream");
 
 function writeSession(dir: string, id: string, entries: object[]): void {
-  const content = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  const content = `${entries.map((e) => JSON.stringify(e)).join("\n")}\n`;
   writeFileSync(join(dir, `${id}.jsonl`), content, "utf-8");
 }
 
@@ -82,7 +82,7 @@ describe("AutoDream", () => {
       statePath: join(FIXTURES_DIR, "consolidation-state.json"),
       lockPath: join(FIXTURES_DIR, "consolidation.lock"),
       config: { enabled: true, minHours: 0, minSessions: 5 },
-      consolidate: async (transcript: string) => [
+      consolidate: async (_transcript: string) => [
         { filename: "patterns.md", content: "# Patterns\n\nUser likes short responses." },
       ],
     });
@@ -114,7 +114,10 @@ describe("AutoDream", () => {
       statePath: join(FIXTURES_DIR, "consolidation-state.json"),
       lockPath: join(FIXTURES_DIR, "consolidation.lock"),
       config: { enabled: true, minHours: 0, minSessions: 5 },
-      consolidate: async () => { called = true; return []; },
+      consolidate: async () => {
+        called = true;
+        return [];
+      },
     });
 
     await dream.run();

@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generatePlist, PLIST_LABEL } from "../../src/cron/launchd.js";

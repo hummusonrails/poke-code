@@ -67,12 +67,13 @@ export function Spinner({
         <Text color="#f5a623">
           {spinnerChar} {label}
         </Text>
-        {showDuration && elapsed >= 2000 && (
-          <Text color="gray"> ({formatDuration(elapsed)})</Text>
-        )}
+        {showDuration && elapsed >= 2000 && <Text color="gray"> ({formatDuration(elapsed)})</Text>}
       </Box>
       {showTips && elapsed >= 5000 && (
-        <Text color="gray" dimColor>{"  "}{tip}</Text>
+        <Text color="gray" dimColor>
+          {"  "}
+          {tip}
+        </Text>
       )}
     </Box>
   );

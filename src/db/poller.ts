@@ -97,6 +97,7 @@ function parseRow(row: RawMessageRow): Message | null {
 
 export class ChatDbPoller {
   private db: Database.Database;
+  // biome-ignore lint/correctness/noUnusedPrivateClassMembers: stored for potential future use in filtering
   private handleId: number | null = null;
   private chatId: number | null = null;
   private lastSeenRowId: number = 0;

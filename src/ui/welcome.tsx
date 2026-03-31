@@ -60,6 +60,7 @@ export function Welcome({ version, cwd, recentSessions }: WelcomeProps) {
         <Box flexDirection="column" borderStyle="round" borderColor={POKE.dim} paddingX={3} paddingY={1} width={38}>
           {/* Palm tree */}
           {PALM_TREE.map((line, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static ASCII art array, order never changes
             <Text key={`palm-${i}`} color={POKE.lightBlue}>
               {line}
             </Text>

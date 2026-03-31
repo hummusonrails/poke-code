@@ -2,36 +2,36 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { CronExpressionParser } from "cron-parser";
 import { Box, render, Text, useInput } from "ink";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PokeApiClient } from "./api/client.js";
 import { conversationLoop, createPollFn } from "./api/conversation.js";
-import { routeCommand, getCommandList } from "./commands/router.js";
-import { matchCommands } from "./ui/typeahead.js";
+import { getCommandList, routeCommand } from "./commands/router.js";
 import { ConfigStore } from "./config/store.js";
 import { ContextBuilder } from "./context/builder.js";
+import { installLaunchd, uninstallLaunchd } from "./cron/launchd.js";
+import { parseNaturalSchedule } from "./cron/natural-schedule.js";
+import { CronScheduler } from "./cron/scheduler.js";
+import { CronStorage } from "./cron/storage.js";
 import { canImsgSend, imsgSend } from "./db/imsg-sender.js";
 import { ChatDbPoller } from "./db/poller.js";
 import { stripCommands } from "./parser/strip-commands.js";
+import { AutoDream } from "./services/autodream.js";
 import { SessionManager } from "./session/manager.js";
+import { StartupProfiler } from "./startup.js";
 import { ToolExecutor } from "./tools/executor.js";
 import { ToolRegistry } from "./tools/registry.js";
 import type { PermissionMode, ToolCall, ToolResult } from "./types.js";
 import { formatErrorWithHint } from "./ui/error-display.js";
 import { InputHistory } from "./ui/input-history.js";
 import { MessageView } from "./ui/message.js";
-import { useTerminalSize, computeAppHeight } from "./ui/use-terminal-size.js";
 import { PermissionPrompt } from "./ui/permission.js";
 import { Spinner } from "./ui/spinner.js";
 import { StatusLine } from "./ui/status-line.js";
-import { StartupProfiler } from "./startup.js";
+import { matchCommands } from "./ui/typeahead.js";
+import { computeAppHeight, useTerminalSize } from "./ui/use-terminal-size.js";
 import { Welcome } from "./ui/welcome.js";
-import { CronScheduler } from "./cron/scheduler.js";
-import { CronStorage } from "./cron/storage.js";
-import { parseNaturalSchedule } from "./cron/natural-schedule.js";
-import { installLaunchd, uninstallLaunchd } from "./cron/launchd.js";
-import { AutoDream } from "./services/autodream.js";
-import { CronExpressionParser } from "cron-parser";
 
 export interface AppProps {
   apiKey: string;
@@ -133,12 +133,12 @@ function App(props: AppProps) {
   // Initialize session + load recent sessions for welcome
   useEffect(() => {
     const profiler = new StartupProfiler();
-    profiler.checkpoint('session-init');
+    profiler.checkpoint("session-init");
 
     const recent = sessionManager.current.list();
     setRecentSessions(recent.map((s) => ({ id: s.id, lastActiveAt: s.lastActiveAt, cwd: s.cwd })));
 
-    let session;
+    let session: ReturnType<typeof sessionManager.current.getSession> | undefined;
     if (resumeSessionId) {
       session = sessionManager.current.getSession(resumeSessionId);
       if (session) {
@@ -178,7 +178,7 @@ function App(props: AppProps) {
     scheduler.start();
     cronScheduler.current = scheduler;
 
-    profiler.checkpoint('session-ready');
+    profiler.checkpoint("session-ready");
     if (props.verbose) {
       console.error(`Startup:\n${profiler.summary()}`);
     }
@@ -186,7 +186,7 @@ function App(props: AppProps) {
     return () => {
       cronScheduler.current?.stop();
     };
-  }, [resumeSessionId, cwd]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [resumeSessionId, cwd, props.verbose, configDir]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set up chat.db poller for receiving messages
   useEffect(() => {
@@ -282,9 +282,10 @@ function App(props: AppProps) {
                   const text = response.message ?? "";
                   const files: { filename: string; content: string }[] = [];
                   const blockPattern = /```(\S+\.md)\n([\s\S]*?)```/g;
-                  let blockMatch: RegExpExecArray | null;
-                  while ((blockMatch = blockPattern.exec(text)) !== null) {
+                  let blockMatch = blockPattern.exec(text);
+                  while (blockMatch !== null) {
                     files.push({ filename: blockMatch[1], content: blockMatch[2].trim() });
+                    blockMatch = blockPattern.exec(text);
                   }
                   if (files.length === 0 && text.trim()) {
                     files.push({ filename: "consolidated.md", content: text.trim() });
@@ -416,7 +417,7 @@ function App(props: AppProps) {
                     oneShot = nlParsed.oneShot;
                     const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
                     const next = CronExpressionParser.parse(schedule).next().toDate();
-                    return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next!.toLocaleString()}\nPrompt: ${actualPrompt}`;
+                    return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
                   }
                 }
               }
@@ -426,7 +427,7 @@ function App(props: AppProps) {
             try {
               const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
               const next = CronExpressionParser.parse(schedule).next().toDate();
-              return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next!.toLocaleString()}\nPrompt: ${actualPrompt}`;
+              return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
             } catch (err) {
               return err instanceof Error ? err.message : String(err);
             }
@@ -434,10 +435,18 @@ function App(props: AppProps) {
           cronList: () => {
             const tasks = cronStorage.current.list();
             if (tasks.length === 0) return "No scheduled tasks.";
-            return tasks.map((t) => {
-              const next = (() => { try { return CronExpressionParser.parse(t.schedule).next().toDate()?.toLocaleString() ?? "?"; } catch { return "?"; } })();
-              return `  ${t.id}  ${t.schedule.padEnd(15)} ${t.oneShot ? "(once) " : ""}runs: ${t.runCount}  next: ${next}\n         ${t.prompt.slice(0, 60)}`;
-            }).join("\n\n");
+            return tasks
+              .map((t) => {
+                const next = (() => {
+                  try {
+                    return CronExpressionParser.parse(t.schedule).next().toDate()?.toLocaleString() ?? "?";
+                  } catch {
+                    return "?";
+                  }
+                })();
+                return `  ${t.id}  ${t.schedule.padEnd(15)} ${t.oneShot ? "(once) " : ""}runs: ${t.runCount}  next: ${next}\n         ${t.prompt.slice(0, 60)}`;
+              })
+              .join("\n\n");
           },
           cronRemove: (id: string) => {
             return cronStorage.current.remove(id) ? `Removed task ${id}.` : `Task ${id} not found.`;
@@ -450,10 +459,12 @@ function App(props: AppProps) {
                 .sort()
                 .slice(-10);
               if (files.length === 0) return "No results yet.";
-              return files.map((f: string) => {
-                const content = readFileSync(join(resultsDir, f), "utf-8");
-                return `--- ${f} ---\n${content.slice(0, 2000)}`;
-              }).join("\n\n");
+              return files
+                .map((f: string) => {
+                  const content = readFileSync(join(resultsDir, f), "utf-8");
+                  return `--- ${f} ---\n${content.slice(0, 2000)}`;
+                })
+                .join("\n\n");
             } catch {
               return "No results yet.";
             }
@@ -479,9 +490,10 @@ function App(props: AppProps) {
                 const text = response.message ?? "";
                 const files: { filename: string; content: string }[] = [];
                 const blockPattern = /```(\S+\.md)\n([\s\S]*?)```/g;
-                let blockMatch: RegExpExecArray | null;
-                while ((blockMatch = blockPattern.exec(text)) !== null) {
+                let blockMatch = blockPattern.exec(text);
+                while (blockMatch !== null) {
                   files.push({ filename: blockMatch[1], content: blockMatch[2].trim() });
+                  blockMatch = blockPattern.exec(text);
                 }
                 if (files.length === 0 && text.trim()) {
                   files.push({ filename: "consolidated.md", content: text.trim() });
@@ -728,7 +740,7 @@ function App(props: AppProps) {
       return;
     }
 
-    if (key.tab && !waiting && !pendingPermission && input.startsWith('/')) {
+    if (key.tab && !waiting && !pendingPermission && input.startsWith("/")) {
       const matches = matchCommands(input, getCommandList());
       if (matches.length === 1) {
         setInput(`/${matches[0].name} `);
@@ -758,6 +770,7 @@ function App(props: AppProps) {
       {/* Message list — scrolls within viewport, shrinks when permission prompt shows */}
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
         {messages.slice(pendingPermission ? -5 : undefined).map((msg, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: messages have no stable id; index is safe for a purely append-only list
           <MessageView key={`msg-${i}`} role={msg.role} content={msg.content} />
         ))}
       </Box>
@@ -787,7 +800,10 @@ function App(props: AppProps) {
             {input.startsWith("/") && input.length > 0 && !input.includes(" ") && (
               <Box marginLeft={2}>
                 <Text color="gray" dimColor>
-                  {matchCommands(input, getCommandList()).slice(0, 5).map(c => `/${c.name}`).join("  ")}
+                  {matchCommands(input, getCommandList())
+                    .slice(0, 5)
+                    .map((c) => `/${c.name}`)
+                    .join("  ")}
                 </Text>
               </Box>
             )}

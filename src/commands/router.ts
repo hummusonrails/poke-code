@@ -145,10 +145,13 @@ registerCommand("copy", "Copy last assistant message to clipboard", (ctx) => {
   return { output: result, handled: true };
 });
 
-registerCommand('reduce-motion', 'Toggle reduced motion (disable animations)', (ctx) => {
+registerCommand("reduce-motion", "Toggle reduced motion (disable animations)", (ctx) => {
   const current = ctx.getReducedMotion();
   ctx.setReducedMotion(!current);
-  return { output: `Reduced motion ${!current ? 'on' : 'off'} — animations ${!current ? 'disabled' : 'enabled'}.`, handled: true };
+  return {
+    output: `Reduced motion ${!current ? "on" : "off"} — animations ${!current ? "disabled" : "enabled"}.`,
+    handled: true,
+  };
 });
 
 registerCommand("cron", "Manage scheduled prompts", async (ctx, args) => {
@@ -183,7 +186,7 @@ registerCommand("cron", "Manage scheduled prompts", async (ctx, args) => {
       }
       const schedule = cronParts.slice(0, 5).join(" ");
       const prompt = cronParts.slice(5).join(" ");
-      const result = await ctx.cronAdd(schedule, prompt + " [oneshot]");
+      const result = await ctx.cronAdd(schedule, `${prompt} [oneshot]`);
       return { output: result, handled: true };
     }
     case "install":

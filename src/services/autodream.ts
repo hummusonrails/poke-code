@@ -72,7 +72,11 @@ export class AutoDream {
       this.saveState({ lastConsolidatedAt: new Date().toISOString() });
     } finally {
       if (existsSync(this.options.lockPath)) {
-        try { unlinkSync(this.options.lockPath); } catch { /* ignore */ }
+        try {
+          unlinkSync(this.options.lockPath);
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
@@ -101,9 +105,16 @@ export class AutoDream {
       const raw = readFileSync(filePath, "utf-8").trim();
       if (!raw) continue;
 
-      const entries: SessionEntry[] = raw.split("\n").map((line) => {
-        try { return JSON.parse(line); } catch { return null; }
-      }).filter(Boolean);
+      const entries: SessionEntry[] = raw
+        .split("\n")
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
 
       const messages = entries
         .filter((e) => e.role === "user" || e.role === "assistant")

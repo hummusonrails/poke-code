@@ -1,6 +1,6 @@
-import { mkdirSync, rmSync, existsSync, readFileSync, readdirSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CronScheduler } from "../../src/cron/scheduler.js";
 import { CronStorage } from "../../src/cron/storage.js";
 
@@ -55,7 +55,10 @@ describe("CronScheduler", () => {
     const scheduler = new CronScheduler({
       tasksPath,
       resultsDir,
-      executePrompt: async () => { execCount++; return "ok"; },
+      executePrompt: async () => {
+        execCount++;
+        return "ok";
+      },
     });
 
     await scheduler.tick();
@@ -97,7 +100,9 @@ describe("CronScheduler", () => {
       tasksPath,
       resultsDir,
       executePrompt: async () => "callback result",
-      onResult: (taskId, prompt, result) => { results.push(result); },
+      onResult: (_taskId, _prompt, result) => {
+        results.push(result);
+      },
     });
 
     await scheduler.tick();

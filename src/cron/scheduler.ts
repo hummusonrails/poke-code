@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CronExpressionParser } from "cron-parser";
 import { CronStorage } from "./storage.js";
@@ -83,7 +83,11 @@ export class CronScheduler {
         mkdirSync(this.options.resultsDir, { recursive: true });
         const timestamp = now.toISOString().replace(/[:.]/g, "-");
         const logPath = join(this.options.resultsDir, `${task.id}-${timestamp}.log`);
-        writeFileSync(logPath, `Prompt: ${task.prompt}\nSchedule: ${task.schedule}\nRan at: ${now.toISOString()}\n\n${result}`, "utf-8");
+        writeFileSync(
+          logPath,
+          `Prompt: ${task.prompt}\nSchedule: ${task.schedule}\nRan at: ${now.toISOString()}\n\n${result}`,
+          "utf-8",
+        );
 
         // Update task state
         storage.update(task.id, { lastRunAt: now.toISOString(), runCount: task.runCount + 1 });
@@ -95,7 +99,9 @@ export class CronScheduler {
         if (this.options.imsgSend && !this.options.onResult) {
           try {
             await this.options.imsgSend(`[Cron] ${task.prompt}\n\n${result.slice(0, 4000)}`);
-          } catch { /* best-effort */ }
+          } catch {
+            /* best-effort */
+          }
         }
 
         // Delete one-shot tasks after execution

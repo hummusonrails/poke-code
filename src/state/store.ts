@@ -1,7 +1,7 @@
-import type { PermissionMode, ToolResult } from '../types.js';
+import type { PermissionMode, ToolResult } from "../types.js";
 
 export interface UiMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
 }
 
@@ -21,16 +21,16 @@ export interface AppState {
 
 const DEFAULT_STATE: AppState = {
   messages: [],
-  input: '',
+  input: "",
   multiLine: false,
   waiting: false,
   toolResults: [],
-  permissionMode: 'default',
+  permissionMode: "default",
   verbose: false,
-  sessionId: '',
+  sessionId: "",
   messageCount: 0,
   showWelcome: true,
-  elapsed: '0s',
+  elapsed: "0s",
 };
 
 type Listener = (state: AppState) => void;
@@ -50,7 +50,7 @@ export function createStore(overrides?: Partial<AppState>): Store {
     getState: () => state,
 
     setState: (updater: Updater) => {
-      const partial = typeof updater === 'function' ? updater(state) : updater;
+      const partial = typeof updater === "function" ? updater(state) : updater;
       state = { ...state, ...partial };
       for (const listener of listeners) {
         listener(state);
@@ -59,7 +59,9 @@ export function createStore(overrides?: Partial<AppState>): Store {
 
     subscribe: (listener: Listener) => {
       listeners.add(listener);
-      return () => { listeners.delete(listener); };
+      return () => {
+        listeners.delete(listener);
+      };
     },
   };
 }

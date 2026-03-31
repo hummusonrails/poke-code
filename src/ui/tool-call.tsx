@@ -15,8 +15,8 @@ interface ToolCallPendingProps {
 
 /** Shows tool name and target before execution starts */
 export function ToolCallPending({ toolName, params }: ToolCallPendingProps) {
-  const label = params.path ?? params.command ?? params.pattern ?? params.query ?? params.url ?? '';
-  const shortLabel = typeof label === 'string' && label.length > 60 ? `...${label.slice(-57)}` : String(label);
+  const label = params.path ?? params.command ?? params.pattern ?? params.query ?? params.url ?? "";
+  const shortLabel = typeof label === "string" && label.length > 60 ? `...${label.slice(-57)}` : String(label);
   return (
     <Box>
       <Text color={POKE.dim}>{"  ⏳ "}</Text>
@@ -33,21 +33,21 @@ interface ToolCallViewProps {
 
 /** Shows completed tool with checkmark or X */
 export function ToolCallDone({ result, verbose }: ToolCallViewProps) {
-  const label = result.params.path ?? result.params.command ?? result.params.pattern ?? '';
+  const label = result.params.path ?? result.params.command ?? result.params.pattern ?? "";
   const isError = !!result.error;
-  const shortLabel = typeof label === 'string' && label.length > 60 ? `...${label.slice(-57)}` : String(label);
+  const shortLabel = typeof label === "string" && label.length > 60 ? `...${label.slice(-57)}` : String(label);
 
   return (
     <Box flexDirection="column">
       <Box>
-        <Text color={isError ? '#e05252' : '#4caf50'}>{isError ? '  ✗ ' : '  ✓ '}</Text>
-        <Text color={isError ? '#e05252' : POKE.muted}>{shortToolName(result.tool)}</Text>
+        <Text color={isError ? "#e05252" : "#4caf50"}>{isError ? "  ✗ " : "  ✓ "}</Text>
+        <Text color={isError ? "#e05252" : POKE.muted}>{shortToolName(result.tool)}</Text>
         <Text color={POKE.dim}> {shortLabel}</Text>
-        {isError && <Text color="#e05252"> — {(result.error ?? '').slice(0, 60)}</Text>}
+        {isError && <Text color="#e05252"> — {(result.error ?? "").slice(0, 60)}</Text>}
       </Box>
       {verbose && (
         <Box marginLeft={4}>
-          <Text color="gray">{(result.error ?? result.output ?? '').slice(0, 200)}</Text>
+          <Text color="gray">{(result.error ?? result.output ?? "").slice(0, 200)}</Text>
         </Box>
       )}
     </Box>
@@ -102,6 +102,7 @@ export function ToolSummary({ results, verbose }: ToolSummaryProps) {
         <Text color={POKE.muted}>{summary}</Text>
         {errors.length > 0 && <Text color="red"> ({errors.length} failed)</Text>}
       </Box>
+      {/* biome-ignore lint/suspicious/noArrayIndexKey: tool results have no stable id; order is fixed */}
       {verbose && results.map((r, i) => <ToolCallView key={`tool-${i}`} result={r} verbose />)}
     </Box>
   );

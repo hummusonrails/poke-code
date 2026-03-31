@@ -4,7 +4,7 @@ export interface CommandHint {
 }
 
 export function matchCommands(input: string, commands: CommandHint[]): CommandHint[] {
-  if (!input.startsWith('/')) return [];
+  if (!input.startsWith("/")) return [];
   const prefix = input.slice(1).toLowerCase();
-  return commands.filter(cmd => cmd.name.toLowerCase().startsWith(prefix));
+  return commands.filter((cmd) => cmd.name.toLowerCase().startsWith(prefix));
 }

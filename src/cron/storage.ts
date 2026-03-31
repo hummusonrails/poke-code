@@ -21,12 +21,7 @@ export class CronStorage {
     }
   }
 
-  add(
-    prompt: string,
-    schedule: string,
-    cwd: string,
-    opts: { oneShot?: boolean; expiresAt?: string },
-  ): CronTask {
+  add(prompt: string, schedule: string, cwd: string, opts: { oneShot?: boolean; expiresAt?: string }): CronTask {
     const tasks = this.list();
     if (tasks.length >= MAX_TASKS) {
       throw new Error(`Maximum of 50 scheduled tasks reached. Remove some with /cron remove <id>.`);
@@ -40,7 +35,7 @@ export class CronStorage {
       createdAt: now.toISOString(),
       expiresAt: opts.oneShot
         ? null
-        : opts.expiresAt ?? new Date(now.getTime() + DEFAULT_EXPIRY_DAYS * 86400000).toISOString(),
+        : (opts.expiresAt ?? new Date(now.getTime() + DEFAULT_EXPIRY_DAYS * 86400000).toISOString()),
       lastRunAt: null,
       runCount: 0,
       oneShot: opts.oneShot ?? false,

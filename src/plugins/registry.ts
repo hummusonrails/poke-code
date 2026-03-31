@@ -1,4 +1,4 @@
-import type { HookConfig } from '../hooks/hooks.js';
+import type { HookConfig } from "../hooks/hooks.js";
 
 export interface PluginSkill {
   name: string;
@@ -10,7 +10,7 @@ export interface PluginManifest {
   name: string;
   version: string;
   description: string;
-  source: 'builtin' | 'npm' | 'local';
+  source: "builtin" | "npm" | "local";
   skills: PluginSkill[];
   hooks: HookConfig[];
 }
@@ -19,8 +19,8 @@ export class PluginRegistry {
   private plugins = new Map<string, PluginManifest>();
 
   register(manifest: PluginManifest): void {
-    if (!manifest.name || manifest.name.trim() === '') {
-      throw new Error('Invalid plugin: name is required');
+    if (!manifest.name || manifest.name.trim() === "") {
+      throw new Error("Invalid plugin: name is required");
     }
     if (this.plugins.has(manifest.name)) {
       throw new Error(`Plugin "${manifest.name}" is already registered`);

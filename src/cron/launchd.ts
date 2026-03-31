@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
 export const PLIST_LABEL = "com.poke-code.daemon";
 
@@ -54,7 +54,9 @@ export function uninstallLaunchd(): string {
   }
   try {
     execFileSync("launchctl", ["unload", plistPath], { timeout: 10000 });
-  } catch { /* may not be loaded */ }
+  } catch {
+    /* may not be loaded */
+  }
   unlinkSync(plistPath);
   return `Unloaded and removed: ${plistPath}`;
 }

@@ -22,27 +22,27 @@ export class InputHistory {
   }
 
   up(): string {
-    if (this.entries.length === 0) return '';
+    if (this.entries.length === 0) return "";
     if (this.cursor === -1) {
       this.cursor = this.entries.length - 1;
     } else if (this.cursor > 0) {
       this.cursor--;
     }
-    return this.entries[this.cursor] ?? '';
+    return this.entries[this.cursor] ?? "";
   }
 
   down(): string {
-    if (this.cursor === -1) return '';
+    if (this.cursor === -1) return "";
     if (this.cursor < this.entries.length - 1) {
       this.cursor++;
-      return this.entries[this.cursor] ?? '';
+      return this.entries[this.cursor] ?? "";
     }
     this.cursor = -1;
-    return '';
+    return "";
   }
 
   search(prefix: string): string[] {
-    return this.entries.filter(e => e.startsWith(prefix)).reverse();
+    return this.entries.filter((e) => e.startsWith(prefix)).reverse();
   }
 
   size(): number {

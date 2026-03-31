@@ -49,9 +49,7 @@ export async function startDaemon(): Promise<void> {
       const response = await apiClient.sendMessage(fullMessage);
       return response.message ?? "Message sent.";
     },
-    imsgSend: useImsg && config.chatId
-      ? (text: string) => imsgSend(config.chatId!, text)
-      : undefined,
+    imsgSend: useImsg && config.chatId ? (text: string) => imsgSend(config.chatId!, text) : undefined,
   });
 
   scheduler.start();

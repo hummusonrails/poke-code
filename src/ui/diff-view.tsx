@@ -31,29 +31,34 @@ export function DiffView({ filePath, oldContent, newContent, context = 3 }: Diff
   return (
     <Box flexDirection="column" marginLeft={2}>
       {lines.map((line, i) => {
+        const k = i;
         if (line.startsWith("+")) {
+          // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no stable identity; index is safe here
           return (
-            <Text key={i} color="#4caf50">
+            <Text key={k} color="#4caf50">
               {line}
             </Text>
           );
         }
         if (line.startsWith("-")) {
+          // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no stable identity; index is safe here
           return (
-            <Text key={i} color="#e05252">
+            <Text key={k} color="#e05252">
               {line}
             </Text>
           );
         }
         if (line.startsWith("@@")) {
+          // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no stable identity; index is safe here
           return (
-            <Text key={i} color="cyan" dimColor>
+            <Text key={k} color="cyan" dimColor>
               {line}
             </Text>
           );
         }
+        // biome-ignore lint/suspicious/noArrayIndexKey: diff lines have no stable identity; index is safe here
         return (
-          <Text key={i} color="gray">
+          <Text key={k} color="gray">
             {line}
           </Text>
         );

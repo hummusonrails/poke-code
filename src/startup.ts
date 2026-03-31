@@ -30,7 +30,7 @@ export class StartupProfiler {
         const delta = i === 0 ? t.elapsed : t.elapsed - this.timings[i - 1].elapsed;
         return `  ${t.label}: +${delta.toFixed(1)}ms (${t.elapsed.toFixed(1)}ms total)`;
       })
-      .join('\n');
+      .join("\n");
   }
 }
 
@@ -43,7 +43,7 @@ export async function parallelStartup<T extends Record<string, () => Promise<unk
   for (let i = 0; i < entries.length; i++) {
     const [key] = entries[i];
     const result = results[i];
-    out[key] = result.status === 'fulfilled' ? result.value : null;
+    out[key] = result.status === "fulfilled" ? result.value : null;
   }
   return out as { [K in keyof T]: Awaited<ReturnType<T[K]>> | null };
 }

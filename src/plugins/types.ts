@@ -1,4 +1,4 @@
-import type { HookConfig } from '../hooks/hooks.js';
+import type { HookConfig } from "../hooks/hooks.js";
 
 export interface PluginSkill {
   name: string;
@@ -10,7 +10,7 @@ export interface PluginManifest {
   name: string;
   version: string;
   description: string;
-  source: 'builtin' | 'npm' | 'local';
+  source: "builtin" | "npm" | "local";
   skills: PluginSkill[];
   hooks: HookConfig[];
 }
