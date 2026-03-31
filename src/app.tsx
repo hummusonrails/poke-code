@@ -20,6 +20,7 @@ import { MessageView } from "./ui/message.js";
 import { PermissionPrompt } from "./ui/permission.js";
 import { Spinner } from "./ui/spinner.js";
 import { StatusLine } from "./ui/status-line.js";
+import { StartupProfiler } from "./startup.js";
 import { Welcome } from "./ui/welcome.js";
 
 export interface AppProps {
@@ -115,6 +116,9 @@ function App(props: AppProps) {
 
   // Initialize session + load recent sessions for welcome
   useEffect(() => {
+    const profiler = new StartupProfiler();
+    profiler.checkpoint('session-init');
+
     const recent = sessionManager.current.list();
     setRecentSessions(recent.map((s) => ({ id: s.id, lastActiveAt: s.lastActiveAt, cwd: s.cwd })));
 
@@ -140,6 +144,11 @@ function App(props: AppProps) {
       session = sessionManager.current.create(cwd);
     }
     setSessionId(session.id);
+
+    profiler.checkpoint('session-ready');
+    if (props.verbose) {
+      console.error(`Startup:\n${profiler.summary()}`);
+    }
   }, [resumeSessionId, cwd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set up chat.db poller for receiving messages
