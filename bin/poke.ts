@@ -184,6 +184,11 @@ async function main(): Promise<void> {
       type: "boolean",
       describe: "One-shot / pipe mode (same as providing a message argument)",
     })
+    .option("daemon", {
+      type: "string",
+      choices: ["start", "stop", "status"] as const,
+      describe: "Manage the background cron daemon",
+    })
     .help()
     .alias("help", "h")
     .parse();
@@ -212,6 +217,23 @@ async function main(): Promise<void> {
   const cwd = process.cwd();
   const permissionMode = (argv["permission-mode"] as PermissionMode) ?? config.permissionMode;
   const dbPath = join(homedir(), "Library", "Messages", "chat.db");
+
+  // Daemon mode
+  if (argv.daemon) {
+    const { startDaemon, stopDaemon, daemonStatus } = await import("../src/entrypoints/daemon.js");
+    switch (argv.daemon) {
+      case "start":
+        await startDaemon();
+        break;
+      case "stop":
+        stopDaemon();
+        break;
+      case "status":
+        daemonStatus();
+        break;
+    }
+    return;
+  }
 
   // Positional message — first non-option arg
   const positionalMessage = (argv._ as string[]).join(" ").trim() || undefined;
