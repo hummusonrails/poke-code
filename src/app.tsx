@@ -2,29 +2,35 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { CronExpressionParser } from "cron-parser";
 import { Box, render, Text, useInput } from "ink";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PokeApiClient } from "./api/client.js";
 import { conversationLoop, createPollFn } from "./api/conversation.js";
-import { routeCommand, getCommandList } from "./commands/router.js";
-import { matchCommands } from "./ui/typeahead.js";
+import { getCommandList, routeCommand } from "./commands/router.js";
 import { ConfigStore } from "./config/store.js";
 import { ContextBuilder } from "./context/builder.js";
-import { imsgSend } from "./db/imsg-sender.js";
+import { installLaunchd, uninstallLaunchd } from "./cron/launchd.js";
+import { parseNaturalSchedule } from "./cron/natural-schedule.js";
+import { CronScheduler } from "./cron/scheduler.js";
+import { CronStorage } from "./cron/storage.js";
+import { canImsgSend, imsgSend } from "./db/imsg-sender.js";
 import { ChatDbPoller } from "./db/poller.js";
 import { stripCommands } from "./parser/strip-commands.js";
+import { AutoDream } from "./services/autodream.js";
 import { SessionManager } from "./session/manager.js";
+import { StartupProfiler } from "./startup.js";
 import { ToolExecutor } from "./tools/executor.js";
 import { ToolRegistry } from "./tools/registry.js";
 import type { PermissionMode, ToolCall, ToolResult } from "./types.js";
 import { formatErrorWithHint } from "./ui/error-display.js";
 import { InputHistory } from "./ui/input-history.js";
 import { MessageView } from "./ui/message.js";
-import { useTerminalSize, computeAppHeight } from "./ui/use-terminal-size.js";
 import { PermissionPrompt } from "./ui/permission.js";
 import { Spinner } from "./ui/spinner.js";
 import { StatusLine } from "./ui/status-line.js";
-import { StartupProfiler } from "./startup.js";
+import { matchCommands } from "./ui/typeahead.js";
+import { computeAppHeight, useTerminalSize } from "./ui/use-terminal-size.js";
 import { Welcome } from "./ui/welcome.js";
 
 export interface AppProps {
@@ -100,6 +106,9 @@ function App(props: AppProps) {
   const lastSeenRowId = useRef<number>(0);
   const alwaysAllowed = useRef<Set<string>>(new Set());
   const inputHistory = useRef(new InputHistory());
+  const cronScheduler = useRef<CronScheduler | null>(null);
+  const cronStorage = useRef(new CronStorage(join(configDir, "scheduled_tasks.json")));
+  const store = useRef(new ConfigStore(configDir));
 
   // Permission prompt function for ToolExecutor
   const promptForPermission = useCallback((toolCall: ToolCall): Promise<boolean> => {
@@ -124,12 +133,12 @@ function App(props: AppProps) {
   // Initialize session + load recent sessions for welcome
   useEffect(() => {
     const profiler = new StartupProfiler();
-    profiler.checkpoint('session-init');
+    profiler.checkpoint("session-init");
 
     const recent = sessionManager.current.list();
     setRecentSessions(recent.map((s) => ({ id: s.id, lastActiveAt: s.lastActiveAt, cwd: s.cwd })));
 
-    let session;
+    let session: ReturnType<typeof sessionManager.current.getSession> | undefined;
     if (resumeSessionId) {
       session = sessionManager.current.getSession(resumeSessionId);
       if (session) {
@@ -152,11 +161,32 @@ function App(props: AppProps) {
     }
     setSessionId(session.id);
 
-    profiler.checkpoint('session-ready');
+    // Start cron scheduler in session mode
+    const scheduler = new CronScheduler({
+      tasksPath: join(configDir, "scheduled_tasks.json"),
+      resultsDir: join(configDir, "cron-results"),
+      executePrompt: async (prompt: string, promptCwd: string) => {
+        const builder = new ContextBuilder(new ToolRegistry(), promptCwd, configDir);
+        const fullMessage = builder.build(prompt);
+        const response = await apiClient.current.sendMessage(fullMessage);
+        return response.message ?? "Message sent.";
+      },
+      onResult: (_taskId: string, prompt: string, result: string) => {
+        setMessages((prev) => [...prev, { role: "system", content: `[Cron] ${prompt}\n\n${result}` }]);
+      },
+    });
+    scheduler.start();
+    cronScheduler.current = scheduler;
+
+    profiler.checkpoint("session-ready");
     if (props.verbose) {
       console.error(`Startup:\n${profiler.summary()}`);
     }
-  }, [resumeSessionId, cwd]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return () => {
+      cronScheduler.current?.stop();
+    };
+  }, [resumeSessionId, cwd, props.verbose, configDir]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set up chat.db poller for receiving messages
   useEffect(() => {
@@ -237,7 +267,47 @@ function App(props: AppProps) {
             store.update({ apiKey: key });
             apiClient.current = new PokeApiClient(key);
           },
-          quit: () => process.exit(0),
+          quit: () => {
+            // Trigger autodream on quit if thresholds are met
+            const dream = new AutoDream({
+              sessionsDir: join(configDir, "sessions"),
+              memoryDir: join(cwd, ".poke", "memory", "autodream"),
+              statePath: join(configDir, "consolidation-state.json"),
+              lockPath: join(configDir, "consolidation.lock"),
+              config: store.current.load().autoDream,
+              consolidate: async (transcript: string) => {
+                const consolidationPrompt = `You are a memory consolidation agent. Read the following session transcripts and extract key facts, decisions, user preferences, and recurring patterns worth remembering for future sessions. Write concise markdown files. Format your response as fenced code blocks with the filename as the language identifier.\n\nTranscripts:\n${transcript.slice(0, 50000)}`;
+                try {
+                  const response = await apiClient.current.sendMessage(consolidationPrompt);
+                  const text = response.message ?? "";
+                  const files: { filename: string; content: string }[] = [];
+                  const blockPattern = /```(\S+\.md)\n([\s\S]*?)```/g;
+                  let blockMatch = blockPattern.exec(text);
+                  while (blockMatch !== null) {
+                    files.push({ filename: blockMatch[1], content: blockMatch[2].trim() });
+                    blockMatch = blockPattern.exec(text);
+                  }
+                  if (files.length === 0 && text.trim()) {
+                    files.push({ filename: "consolidated.md", content: text.trim() });
+                  }
+                  return files;
+                } catch {
+                  return [];
+                }
+              },
+            });
+            void (async () => {
+              cronScheduler.current?.stop();
+              if (dream.shouldRun()) {
+                try {
+                  await dream.run();
+                } catch {
+                  /* ignore */
+                }
+              }
+              process.exit(0);
+            })();
+          },
           getMemoryList: () => {
             const dirs = [join(cwd, ".poke/memory"), join(cwd, ".claude/memory"), join(configDir, "memory")];
             const files: string[] = [];
@@ -324,6 +394,122 @@ function App(props: AppProps) {
           },
           getReducedMotion: () => reducedMotion,
           setReducedMotion: (on: boolean) => setReducedMotion(on),
+          cronAdd: async (scheduleOrNatural: string, prompt: string) => {
+            let schedule: string;
+            let actualPrompt: string;
+            let oneShot = false;
+
+            if (prompt) {
+              schedule = scheduleOrNatural;
+              actualPrompt = prompt.replace(" [oneshot]", "");
+              oneShot = prompt.endsWith("[oneshot]");
+            } else {
+              // Natural language: try to split schedule from prompt
+              const patterns = [
+                /^(every\s+\d+\s+(?:minute|hour)s?)\s+(.+)$/i,
+                /^(every\s+(?:day|weekday|hour|minute)\s+at\s+\S+)\s+(.+)$/i,
+                /^(every\s+(?:day|weekday|hour|minute))\s+(.+)$/i,
+                /^(every\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+\S+)?)\s+(.+)$/i,
+                /^((?:at|once\s+at)\s+\S+)\s+(.+)$/i,
+                /^(in\s+\d+\s+(?:hour|minute)s?)\s+(.+)$/i,
+              ];
+              for (const pattern of patterns) {
+                const match = scheduleOrNatural.match(pattern);
+                if (match) {
+                  const nlParsed = parseNaturalSchedule(match[1]);
+                  if (nlParsed) {
+                    schedule = nlParsed.cron;
+                    actualPrompt = match[2];
+                    oneShot = nlParsed.oneShot;
+                    const next = CronExpressionParser.parse(schedule).next().toDate();
+                    const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
+                    return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
+                  }
+                }
+              }
+              return `Could not parse schedule. Use cron syntax:\n  /cron add */30 * * * * check build status\n\nOr natural language:\n  /cron every 30 minutes check build status`;
+            }
+
+            try {
+              const next = CronExpressionParser.parse(schedule).next().toDate();
+              const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
+              return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
+            } catch (err) {
+              return err instanceof Error ? err.message : String(err);
+            }
+          },
+          cronList: () => {
+            const tasks = cronStorage.current.list();
+            if (tasks.length === 0) return "No scheduled tasks.";
+            return tasks
+              .map((t) => {
+                const next = (() => {
+                  try {
+                    return CronExpressionParser.parse(t.schedule).next().toDate()?.toLocaleString() ?? "?";
+                  } catch {
+                    return "?";
+                  }
+                })();
+                return `  ${t.id}  ${t.schedule.padEnd(15)} ${t.oneShot ? "(once) " : ""}runs: ${t.runCount}  next: ${next}\n         ${t.prompt.slice(0, 60)}`;
+              })
+              .join("\n\n");
+          },
+          cronRemove: (id: string) => {
+            return cronStorage.current.remove(id) ? `Removed task ${id}.` : `Task ${id} not found.`;
+          },
+          cronResults: (id?: string) => {
+            const resultsDir = join(configDir, "cron-results");
+            try {
+              const files = readdirSync(resultsDir)
+                .filter((f: string) => !id || f.startsWith(id))
+                .sort()
+                .slice(-10);
+              if (files.length === 0) return "No results yet.";
+              return files
+                .map((f: string) => {
+                  const content = readFileSync(join(resultsDir, f), "utf-8");
+                  return `--- ${f} ---\n${content.slice(0, 2000)}`;
+                })
+                .join("\n\n");
+            } catch {
+              return "No results yet.";
+            }
+          },
+          cronInstall: () => {
+            const binPath = process.argv[1];
+            const logPath = join(configDir, "daemon.log");
+            return installLaunchd(binPath, logPath);
+          },
+          cronUninstall: () => {
+            return uninstallLaunchd();
+          },
+          runDream: async () => {
+            const dream = new AutoDream({
+              sessionsDir: join(configDir, "sessions"),
+              memoryDir: join(cwd, ".poke", "memory", "autodream"),
+              statePath: join(configDir, "consolidation-state.json"),
+              lockPath: join(configDir, "consolidation.lock"),
+              config: store.current.load().autoDream,
+              consolidate: async (transcript: string) => {
+                const consolidationPrompt = `You are a memory consolidation agent. Read the following session transcripts and extract key facts, decisions, user preferences, and recurring patterns worth remembering for future sessions. Write concise markdown files. Format your response as one or more fenced code blocks with the filename as the language identifier, like:\n\n\`\`\`patterns.md\ncontent here\n\`\`\`\n\nTranscripts:\n${transcript.slice(0, 50000)}`;
+                const response = await apiClient.current.sendMessage(consolidationPrompt);
+                const text = response.message ?? "";
+                const files: { filename: string; content: string }[] = [];
+                const blockPattern = /```(\S+\.md)\n([\s\S]*?)```/g;
+                let blockMatch = blockPattern.exec(text);
+                while (blockMatch !== null) {
+                  files.push({ filename: blockMatch[1], content: blockMatch[2].trim() });
+                  blockMatch = blockPattern.exec(text);
+                }
+                if (files.length === 0 && text.trim()) {
+                  files.push({ filename: "consolidated.md", content: text.trim() });
+                }
+                return files;
+              },
+            });
+            await dream.run();
+            return "Memory consolidation complete.";
+          },
         };
 
         const result = await routeCommand(trimmed, ctx);
@@ -365,7 +551,8 @@ function App(props: AppProps) {
         });
 
         // Use imsg send for tool results when available (bypasses Poke API, more reliable for large payloads)
-        const sendResultsFn = chatId ? (text: string) => imsgSend(chatId, text) : undefined;
+        const imsgAvailable = chatId ? await canImsgSend() : false;
+        const sendResultsFn = chatId && imsgAvailable ? (text: string) => imsgSend(chatId, text) : undefined;
 
         const events = conversationLoop(trimmed, {
           apiClient: apiClient.current,
@@ -559,7 +746,7 @@ function App(props: AppProps) {
       return;
     }
 
-    if (key.tab && !waiting && !pendingPermission && input.startsWith('/')) {
+    if (key.tab && !waiting && !pendingPermission && input.startsWith("/")) {
       const matches = matchCommands(input, getCommandList());
       if (matches.length === 1) {
         setInput(`/${matches[0].name} `);
@@ -589,6 +776,7 @@ function App(props: AppProps) {
       {/* Message list — scrolls within viewport, shrinks when permission prompt shows */}
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
         {messages.slice(pendingPermission ? -5 : undefined).map((msg, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: messages have no stable id; index is safe for a purely append-only list
           <MessageView key={`msg-${i}`} role={msg.role} content={msg.content} />
         ))}
       </Box>
@@ -618,7 +806,10 @@ function App(props: AppProps) {
             {input.startsWith("/") && input.length > 0 && !input.includes(" ") && (
               <Box marginLeft={2}>
                 <Text color="gray" dimColor>
-                  {matchCommands(input, getCommandList()).slice(0, 5).map(c => `/${c.name}`).join("  ")}
+                  {matchCommands(input, getCommandList())
+                    .slice(0, 5)
+                    .map((c) => `/${c.name}`)
+                    .join("  ")}
                 </Text>
               </Box>
             )}

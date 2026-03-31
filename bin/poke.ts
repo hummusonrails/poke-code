@@ -184,12 +184,34 @@ async function main(): Promise<void> {
       type: "boolean",
       describe: "One-shot / pipe mode (same as providing a message argument)",
     })
+    .option("daemon", {
+      type: "string",
+      choices: ["start", "stop", "status"] as const,
+      describe: "Manage the background cron daemon",
+    })
     .help()
     .alias("help", "h")
     .parse();
 
   const configDir = join(homedir(), ".poke");
   const store = new ConfigStore(configDir);
+
+  // Daemon mode — must run before setup wizard gate
+  if (argv.daemon) {
+    const { startDaemon, stopDaemon, daemonStatus } = await import("../src/entrypoints/daemon.js");
+    switch (argv.daemon) {
+      case "start":
+        await startDaemon();
+        break;
+      case "stop":
+        stopDaemon();
+        break;
+      case "status":
+        daemonStatus();
+        break;
+    }
+    return;
+  }
 
   // --init: run full setup wizard
   if (argv.init) {

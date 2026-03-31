@@ -46,7 +46,8 @@ describe("readFileTool", () => {
     const result = await readFileTool({ path: filePath });
     expect(result).toContain("const");
     expect(result).toContain("42");
-    // Check for ANSI escape codes (the \x1b[ prefix)
+    // Check for ANSI escape codes (the ESC[ prefix)
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching ANSI escape sequences
     expect(result).toMatch(/\x1b\[/);
   });
 
@@ -57,6 +58,7 @@ describe("readFileTool", () => {
     const result = await readFileTool({ path: filePath });
     expect(result).toContain("just plain text");
     // No ANSI codes for unknown extensions
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally matching ANSI escape sequences
     expect(result).not.toMatch(/\x1b\[/);
   });
 });

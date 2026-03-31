@@ -1,7 +1,7 @@
 export class PokeError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'PokeError';
+    this.name = "PokeError";
   }
 }
 
@@ -11,7 +11,7 @@ export class ToolError extends PokeError {
 
   constructor(message: string, toolName: string, params: Record<string, unknown>) {
     super(message);
-    this.name = 'ToolError';
+    this.name = "ToolError";
     this.toolName = toolName;
     this.params = params;
   }
@@ -22,7 +22,7 @@ export class ApiError extends PokeError {
 
   constructor(message: string, statusCode: number) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.statusCode = statusCode;
   }
 }
@@ -32,7 +32,7 @@ export class ConfigError extends PokeError {
 
   constructor(message: string, configPath: string) {
     super(message);
-    this.name = 'ConfigError';
+    this.name = "ConfigError";
     this.configPath = configPath;
   }
 }
@@ -43,7 +43,7 @@ export class ShellError extends PokeError {
 
   constructor(message: string, command: string, exitCode: number) {
     super(message);
-    this.name = 'ShellError';
+    this.name = "ShellError";
     this.command = command;
     this.exitCode = exitCode;
   }
@@ -55,21 +55,21 @@ export class PermissionError extends PokeError {
 
   constructor(message: string, toolName: string, mode: string) {
     super(message);
-    this.name = 'PermissionError';
+    this.name = "PermissionError";
     this.toolName = toolName;
     this.mode = mode;
   }
 }
 
 export class AbortError extends PokeError {
-  constructor(message = 'Operation aborted') {
+  constructor(message = "Operation aborted") {
     super(message);
-    this.name = 'AbortError';
+    this.name = "AbortError";
   }
 }
 
 export function isAbortError(err: unknown): boolean {
   if (err instanceof AbortError) return true;
-  if (err instanceof Error && err.name === 'AbortError') return true;
+  if (err instanceof Error && err.name === "AbortError") return true;
   return false;
 }

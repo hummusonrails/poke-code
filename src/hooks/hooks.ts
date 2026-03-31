@@ -1,4 +1,4 @@
-export type HookEventType = 'tool:before' | 'tool:after' | 'session:start' | 'session:end' | 'message:send';
+export type HookEventType = "tool:before" | "tool:after" | "session:start" | "session:end" | "message:send";
 
 export interface HookEvent {
   type: HookEventType;
@@ -35,11 +35,11 @@ export class HookRegistry {
   }
 
   unregister(id: string): void {
-    this.hooks = this.hooks.filter(h => h.id !== id);
+    this.hooks = this.hooks.filter((h) => h.id !== id);
   }
 
   async fire(event: HookEvent): Promise<void> {
-    const matching = this.hooks.filter(h => {
+    const matching = this.hooks.filter((h) => {
       if (h.event !== event.type) return false;
       if (h.toolFilter && h.toolFilter !== event.toolName) return false;
       return true;

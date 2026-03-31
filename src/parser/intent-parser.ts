@@ -325,9 +325,10 @@ function findTriggers(text: string): TriggerMatch[] {
 
   for (const { pattern, tool } of TRIGGERS) {
     pattern.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = pattern.exec(text)) !== null) {
+    let m = pattern.exec(text);
+    while (m !== null) {
       found.push({ start: m.index, end: m.index + m[0].length, tool });
+      m = pattern.exec(text);
     }
   }
 

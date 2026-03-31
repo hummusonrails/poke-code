@@ -115,7 +115,8 @@ function extractViaChunkScan(data: Buffer): string | null {
       continue;
     }
 
-    const printable = str.replace(/[\x00-\x1f\x7f]/g, "");
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally stripping control characters from strings
+    const printable = str.replace(/[\u0000-\u001f\u007f]/g, "");
     if (printable.length >= 2 && printable.length > bestString.length) {
       if (!printable.startsWith("NS") && !printable.startsWith('@"')) {
         bestString = printable;

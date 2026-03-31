@@ -63,6 +63,7 @@ export interface PokeConfig {
   pollIntervalFast: number;
   fastPollDuration: number;
   reducedMotion: boolean;
+  autoDream: AutoDreamConfig;
 }
 
 export const DEFAULT_CONFIG: PokeConfig = {
@@ -73,12 +74,35 @@ export const DEFAULT_CONFIG: PokeConfig = {
   pollIntervalFast: 1500,
   fastPollDuration: 30000,
   reducedMotion: false,
+  autoDream: { enabled: true, minHours: 24, minSessions: 5 },
 };
 
 export interface HandleInfo {
   rowId: number;
   identifier: string;
   chatId: number;
+}
+
+export interface CronTask {
+  id: string;
+  prompt: string;
+  schedule: string;
+  createdAt: string;
+  expiresAt: string | null;
+  lastRunAt: string | null;
+  runCount: number;
+  oneShot: boolean;
+  cwd: string;
+}
+
+export interface AutoDreamConfig {
+  enabled: boolean;
+  minHours: number;
+  minSessions: number;
+}
+
+export interface ConsolidationState {
+  lastConsolidatedAt: string | null;
 }
 
 export type OutputFormat = "text" | "json" | "stream-json";

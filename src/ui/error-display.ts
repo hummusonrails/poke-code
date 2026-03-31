@@ -6,31 +6,31 @@ interface ErrorPattern {
 const ERROR_PATTERNS: ErrorPattern[] = [
   {
     match: /EPERM|operation not permitted|EACCES/i,
-    hint: 'Hint: Grant Full Disk Access to your terminal in System Settings → Privacy & Security',
+    hint: "Hint: Grant Full Disk Access to your terminal in System Settings → Privacy & Security",
   },
   {
     match: /401|unauthorized|invalid.*key/i,
-    hint: 'Hint: Update your API key with /apikey <key>',
+    hint: "Hint: Update your API key with /apikey <key>",
   },
   {
     match: /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|network/i,
-    hint: 'Hint: Check your network connection and try again',
+    hint: "Hint: Check your network connection and try again",
   },
   {
     match: /timed?\s*out|timeout/i,
-    hint: 'Hint: The command exceeded the timeout limit. Try a shorter command or increase the timeout.',
+    hint: "Hint: The command exceeded the timeout limit. Try a shorter command or increase the timeout.",
   },
   {
     match: /ENOENT|no such file|not found/i,
-    hint: 'Hint: Check the file path — use /doctor to verify your setup',
+    hint: "Hint: Check the file path — use /doctor to verify your setup",
   },
   {
     match: /rate.?limit|429|too many requests/i,
-    hint: 'Hint: Rate limited — wait a moment and try again',
+    hint: "Hint: Rate limited — wait a moment and try again",
   },
   {
     match: /ENOSPC|disk.*full|no space/i,
-    hint: 'Hint: Disk is full — free up space and try again',
+    hint: "Hint: Disk is full — free up space and try again",
   },
 ];
 
