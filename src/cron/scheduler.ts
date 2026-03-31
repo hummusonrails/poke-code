@@ -13,34 +13,47 @@ export interface CronSchedulerOptions {
 
 export class CronScheduler {
   private options: CronSchedulerOptions;
-  private interval: ReturnType<typeof setInterval> | null = null;
+  private startTimeout: ReturnType<typeof setTimeout> | null = null;
+  private loopTimeout: ReturnType<typeof setTimeout> | null = null;
+  private running = false;
 
   constructor(options: CronSchedulerOptions) {
     this.options = options;
   }
 
   start(): void {
-    if (this.interval) return;
-    // Align to next minute boundary
+    if (this.running) return;
+    this.running = true;
+    // Align to next minute boundary (0 if already on boundary)
     const now = Date.now();
-    const msToNextMinute = 60000 - (now % 60000);
-    setTimeout(() => {
-      this.tick();
-      this.interval = setInterval(() => this.tick(), 60000);
+    const msToNextMinute = (60000 - (now % 60000)) % 60000;
+    this.startTimeout = setTimeout(() => {
+      this.startTimeout = null;
+      this.runLoop();
     }, msToNextMinute);
-    // Use a sentinel so isRunning() works immediately
-    this.interval = this.interval ?? setInterval(() => {}, 2_147_483_647);
+  }
+
+  private async runLoop(): Promise<void> {
+    if (!this.running) return;
+    await this.tick();
+    if (!this.running) return;
+    this.loopTimeout = setTimeout(() => this.runLoop(), 60000);
   }
 
   stop(): void {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
+    this.running = false;
+    if (this.startTimeout) {
+      clearTimeout(this.startTimeout);
+      this.startTimeout = null;
+    }
+    if (this.loopTimeout) {
+      clearTimeout(this.loopTimeout);
+      this.loopTimeout = null;
     }
   }
 
   isRunning(): boolean {
-    return this.interval !== null;
+    return this.running;
   }
 
   async tick(): Promise<void> {
@@ -48,18 +61,13 @@ export class CronScheduler {
     storage.purgeExpired();
     const tasks = storage.list();
     const now = new Date();
+    const nowMinute = Math.floor(now.getTime() / 60000);
 
     for (const task of tasks) {
       // Dedup: skip if already ran this minute
       if (task.lastRunAt) {
-        const lastRun = new Date(task.lastRunAt);
-        if (
-          lastRun.getFullYear() === now.getFullYear() &&
-          lastRun.getMonth() === now.getMonth() &&
-          lastRun.getDate() === now.getDate() &&
-          lastRun.getHours() === now.getHours() &&
-          lastRun.getMinutes() === now.getMinutes()
-        ) {
+        const lastRunMinute = Math.floor(new Date(task.lastRunAt).getTime() / 60000);
+        if (lastRunMinute === nowMinute) {
           continue;
         }
       }
@@ -68,7 +76,8 @@ export class CronScheduler {
       try {
         const expr = CronExpressionParser.parse(task.schedule, { currentDate: new Date(now.getTime() - 60000) });
         const next = expr.next().toDate();
-        if (next.getHours() !== now.getHours() || next.getMinutes() !== now.getMinutes()) {
+        // Compare full timestamp truncated to minute, not just HH:mm
+        if (Math.floor(next.getTime() / 60000) !== nowMinute) {
           continue;
         }
       } catch {

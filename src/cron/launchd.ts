@@ -9,7 +9,18 @@ export function getPlistPath(): string {
   return join(homedir(), "Library", "LaunchAgents", `${PLIST_LABEL}.plist`);
 }
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export function generatePlist(binPath: string, logPath: string): string {
+  const safeBin = escapeXml(binPath);
+  const safeLog = escapeXml(logPath);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -18,7 +29,7 @@ export function generatePlist(binPath: string, logPath: string): string {
   <string>${PLIST_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${binPath}</string>
+    <string>${safeBin}</string>
     <string>--daemon</string>
     <string>start</string>
   </array>
@@ -27,9 +38,9 @@ export function generatePlist(binPath: string, logPath: string): string {
   <key>RunAtLoad</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>${logPath}</string>
+  <string>${safeLog}</string>
   <key>StandardErrorPath</key>
-  <string>${logPath}</string>
+  <string>${safeLog}</string>
 </dict>
 </plist>`;
 }

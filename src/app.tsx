@@ -296,11 +296,17 @@ function App(props: AppProps) {
                 }
               },
             });
-            if (dream.shouldRun()) {
-              dream.run().catch(() => {});
-            }
-            cronScheduler.current?.stop();
-            process.exit(0);
+            void (async () => {
+              cronScheduler.current?.stop();
+              if (dream.shouldRun()) {
+                try {
+                  await dream.run();
+                } catch {
+                  /* ignore */
+                }
+              }
+              process.exit(0);
+            })();
           },
           getMemoryList: () => {
             const dirs = [join(cwd, ".poke/memory"), join(cwd, ".claude/memory"), join(configDir, "memory")];
@@ -415,8 +421,8 @@ function App(props: AppProps) {
                     schedule = nlParsed.cron;
                     actualPrompt = match[2];
                     oneShot = nlParsed.oneShot;
-                    const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
                     const next = CronExpressionParser.parse(schedule).next().toDate();
+                    const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
                     return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
                   }
                 }
@@ -425,8 +431,8 @@ function App(props: AppProps) {
             }
 
             try {
-              const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
               const next = CronExpressionParser.parse(schedule).next().toDate();
+              const task = cronStorage.current.add(actualPrompt, schedule, cwd, { oneShot });
               return `Task ${task.id} created.\nSchedule: ${schedule}${oneShot ? " (one-shot)" : ""}\nNext run: ${next?.toLocaleString()}\nPrompt: ${actualPrompt}`;
             } catch (err) {
               return err instanceof Error ? err.message : String(err);

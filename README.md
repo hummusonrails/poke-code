@@ -29,8 +29,7 @@
 
 > [!TIP]
 > **Cron Scheduling** — Schedule prompts to run on a timer with natural language (`/cron every 30 minutes check build status`) or standard cron expressions. Runs in-session or as a background daemon with optional macOS launchd integration for auto-start on boot.
-
-> [!TIP]
+>
 > **AutoDream** — Automatic memory consolidation. After enough sessions, poke-code summarizes your recent conversations into long-term memory files so it gets smarter over time — no manual effort required. Trigger manually anytime with `/dream`.
 
 ## What it does
@@ -126,7 +125,7 @@ Schedule prompts to run on a timer using natural language or standard cron expre
 # natural language
 /cron every 30 minutes check if the build is passing
 /cron every weekday at 5pm remind me to push my branch
-/cron tomorrow at 9am summarize overnight git activity
+/cron at 9am summarize overnight git activity
 
 # standard cron syntax
 /cron add */30 * * * * check build status
